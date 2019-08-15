@@ -64,11 +64,27 @@ onmessage = function (ev) {
         })
         previous = now
       }
-      setTimeout(function() { uploader(sock, data, start, previous, tot); }, 0)
+      // Message size adaptation algorithm. Estimate the current speed in
+      // bytes per millisecond and, knowing that, how much time it would
+      // require for us to drain the buffered data. Arrange so that we'll
+      // sleep for half the time. Then, if we're sleeping for less than
+      // a target amount of milliseconds, double the buffer. A key insight
+      // is that we shall never reduce the buffer to avoid synchronising
+      // the behaviour of TCP with the one of this buffer.
+      const currentSpeed = (tot - sock.bufferedAmount) / (now - start)
+      const nextSleep = (sock.bufferedAmount / currentSpeed) / 2
+      const target = 50
+      if (!isNaN(nextSleep) && nextSleep < target && data.length < (1<<24)) {
+        data = new Uint8Array(data.length << 1)
+        // TODO(bassosimone): fill this message
+      }
+      setTimeout(function() {
+        uploader(sock, data, start, previous, tot)
+      }, nextSleep)
     }
 
     sock.onopen = function () {
-      const data = new Uint8Array(1 << 13)
+      const data = new Uint8Array(1<<13)
       // TODO(bassosimone): fill this message
       sock.binarytype = 'arraybuffer'
       const start = new Date().getTime()
