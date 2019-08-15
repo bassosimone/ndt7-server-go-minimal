@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <style>
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.result {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  font-size: 1000%;
+  align: center;
+}
+  </style>
+  <meta charset='utf-8'>
+  <title>ndt7</title>
+</head>
+<body>
+  <div>
+    <div id='download' class='result row'>[Download]</div>
+    <div id='upload' class='result row'>[Upload]</div>
+  </div>
+  <script type='text/javascript'>
+    /* jshint esversion: 6, asi: true */
+    let worker = new Worker('ndt7-minimal.js')
+    worker.onmessage = function (ev) {
+      if (ev.data.elapsed !== undefined && ev.data.numBytes !== undefined &&
+          ev.data.subTest !== undefined) {
+        const speed = 8 * ev.data.numBytes / ev.data.elapsed / 1000 / 1000
+        const elem = document.getElementById(ev.data.subTest)
+        elem.innerHTML = speed.toFixed(2) + ' Mb/s'
+      }
+    }
+    worker.postMessage({
+      href: window.location.href,
+    })
+  </script>
+</body>
+</html>

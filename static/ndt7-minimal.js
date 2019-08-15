@@ -1,0 +1,79 @@
+/* jshint esversion: 6, asi: true, worker: true */
+onmessage = function (ev) {
+  'use strict'
+  let url = new URL(ev.data.href)
+  url.protocol = (url.protocol === 'https:') ? 'wss:' : 'ws:'
+  const wsproto = 'net.measurementlab.ndt.v7'
+
+  function download(callback) {
+    url.pathname = '/ndt/v7/download'
+    const sock = new WebSocket(url.toString(), wsproto)
+    sock.onclose = function () {
+      callback()
+    }
+    sock.onopen = function () {
+      const start = new Date().getTime()
+      let previous = start
+      let tot = 0
+      sock.onmessage = function (ev) {
+        tot += (ev.data instanceof Blob) ? ev.data.size : ev.data.length
+        let now = new Date().getTime()
+        const every = 250  // ms
+        if (now - previous > every) {
+          postMessage({
+            'elapsed': (now - start) / 1000,  // s
+            'numBytes': tot,
+            'subTest': 'download',
+          })
+          previous = now
+        }
+      }
+    }
+  }
+
+  download(function () {
+    url.pathname = '/ndt/v7/upload'
+    const sock = new WebSocket(url.toString(), wsproto)
+    sock.onclose = function () {
+      postMessage({
+        'failure': null,
+        'subTest': 'upload',
+      })
+    }
+
+    function uploader(socket, data, start, previous, tot) {
+      let now = new Date().getTime()
+      const duration = 10000  // millisecond
+      if (now - start > duration) {
+        sock.close()
+        return
+      }
+      // TODO(bassosimone): refine to ensure this works well across a wide
+      // range of CPU speed/network speed/browser combinations
+      const underbuffered = 7 * data.length
+      while (sock.bufferedAmount < underbuffered) {
+        sock.send(data)
+        tot += data.length
+      }
+      const every = 250  // millisecond
+      if (now - previous > every) {
+        postMessage({
+          'elapsed': (now - start) / 1000,  // s
+          'numBytes': (tot - sock.bufferedAmount),
+          'subTest': 'upload',
+        })
+        previous = now
+      }
+      setTimeout(function() { uploader(sock, data, start, previous, tot); }, 0)
+    }
+
+    sock.onopen = function () {
+      const data = new Uint8Array(1 << 13)
+      // TODO(bassosimone): fill this message
+      sock.binarytype = 'arraybuffer'
+      const start = new Date().getTime()
+      const previous = start
+      uploader(sock, data, start, previous, 0)
+    }
+  })
+}

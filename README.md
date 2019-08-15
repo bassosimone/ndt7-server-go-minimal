@@ -25,6 +25,8 @@ sudo ./enable-bbr.bash
 sudo ./ndt7-server-bin -endpoint :443 -key key.pem -cert cert.pem | ./ndt7-server-aux
 ```
 
+The server includes a minimal web client that you can use for testing.
+
 Omit `./ndt7-server-aux` if you don't want to pretty-print the speed. Run
 
 ```bash

@@ -149,6 +149,7 @@ func main() {
 			downloadupload(r.Context(), 15*time.Second, "upload", nil, conn)
 		}
 	})
+	http.Handle("/", http.FileServer(http.Dir("static")))
 	if *cert != "" && *key != "" {
 		http.ListenAndServeTLS(*endpoint, *cert, *key, nil)
 	} else {
