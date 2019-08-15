@@ -2,10 +2,15 @@
 //
 // Usage:
 //
-//    ndt7-server-bin [-bulk-message-size <size>] [-endpoint <epnt>]
+//    ndt7-server-bin [-bulk-message-size <size>] [-cert <cert>]
+//                    [-endpoint <epnt>] [-key <key>]
 //
 // The `-bulk-message-size <size>` flag allows you to set the size of the
 // binary WebSocket messages used to create network load.
+//
+// The `-cert <cert>` and `-key <key>` flags allow to set the certificate
+// and key used by TLS. If either of these is not set, we will listen
+// for plain-text WebSocket, otherwise we'll do secure WebSocket.
 //
 // The `-endpoint <epnt>` flag allows you to control the TCP endpoint
 // where we will listen for ndt7 clients requests.
@@ -39,7 +44,9 @@ const (
 
 var (
 	bulkMessageSize = flag.Int("bulk-message-size", 1<<13, "WebSocket bulk messages size")
+	cert            = flag.String("cert", "", "TLS certificate to use")
 	endpoint        = flag.String("endpoint", ":8080", "Endpoint to listen to")
+	key             = flag.String("key", "", "TLS private key to use")
 )
 
 type measurer struct {
@@ -119,6 +126,7 @@ func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 }
 
 func main() {
+	flag.Parse()
 	http.HandleFunc("/ndt/v7/download", func(w http.ResponseWriter, r *http.Request) {
 		conn := upgrade(w, r)
 		if conn == nil {
@@ -141,5 +149,9 @@ func main() {
 			downloadupload(r.Context(), 15*time.Second, "upload", nil, conn)
 		}
 	})
-	http.ListenAndServe(*endpoint, nil)
+	if *cert != "" && *key != "" {
+		http.ListenAndServeTLS(*endpoint, *cert, *key, nil)
+	} else {
+		http.ListenAndServe(*endpoint, nil)
+	}
 }

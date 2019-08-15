@@ -17,6 +17,13 @@ To serve clear-text incoming requests on port `8080` run
 ./ndt7-server-bin | ./ndt7-server-aux
 ```
 
+To serve TLS incoming requests on port `4443` run
+
+```
+./gencerts.bash
+./ndt7-server-bin -endpoint :4443 -key key.pem -cert cert.pem | ./ndt7-server-aux
+```
+
 Omit `./ndt7-server-aux` if you don't want to pretty-print the speed. Run
 
 ```bash
