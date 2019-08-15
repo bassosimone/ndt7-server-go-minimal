@@ -1,3 +1,25 @@
+// ndt7-server-bin is a minimal ndt7 command line server.
+//
+// Usage:
+//
+//    ndt7-server-bin [-bulk-message-size <size>] [-endpoint <epnt>]
+//
+// The `-bulk-message-size <size>` flag allows you to set the size of the
+// binary WebSocket messages used to create network load.
+//
+// The `-endpoint <epnt>` flag allows you to control the TCP endpoint
+// where we will listen for ndt7 clients requests.
+//
+// Additionally, passing any unrecognized flag, such as `-help`, will
+// cause ndt7-client-bin to print a brief help message.
+//
+// While running, this client emits JSON events separated by newlines on
+// the standard output. These events tell you the number of bytes downloaded or
+// uploaded after a certain amount of seconds have elapsed. For example:
+//
+//     {"SubTest":"download","ElapsedSeconds":1.0,"NumBytes":12345}
+//
+// This program never terminates. Use ^C to interrupt it.
 package main
 
 import (
