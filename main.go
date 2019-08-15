@@ -65,14 +65,28 @@ func (m *measurer) stop() {
 	m.ticker.Stop()
 }
 
-func (m *measurer) maybePrint(total int, subtest string) {
+func (m *measurer) maybePrint(total int, subtest string) (elapsed float64) {
 	select {
-	case <-m.ticker.C:
+	case now := <-m.ticker.C:
+		elapsed = now.Sub(m.begin).Seconds()
 		fmt.Printf(`{"ElapsedSeconds":%f,"SubTest":"%s","NumBytes":%d}`+"\n",
-			time.Now().Sub(m.begin).Seconds(), subtest, total)
+			elapsed, subtest, total)
 	default:
 		// nothing
 	}
+	return
+}
+
+func newPreparedMessage() *websocket.PreparedMessage {
+	data := make([]byte, *bulkMessageSize)
+	if _, err := rand.Read(data); err != nil {
+		return nil
+	}
+	pm, err := websocket.NewPreparedMessage(websocket.BinaryMessage, data)
+	if err != nil {
+		return nil
+	}
+	return pm
 }
 
 func downloadupload(
@@ -95,6 +109,7 @@ func downloadupload(
 				return
 			}
 			total += len(mdata)
+			meas.maybePrint(total, subtest)
 		} else {
 			if err := conn.SetWriteDeadline(time.Now().Add(defaultTimeout)); err != nil {
 				return
@@ -103,8 +118,27 @@ func downloadupload(
 				return
 			}
 			total += *bulkMessageSize
+			elapsed := meas.maybePrint(total, subtest)
+			// If a measurement interval has elapsed, compute the current send
+			// buffer filling speed. Estimate the amount of data we should fill
+			// in every reasonably small interval. Then scale the message we
+			// are sending if it's greater than before and we don't exceed the
+			// limit. We never decrease the message size to avoid syncing the
+			// TCP behaviour with the buffer scaling behaviour.
+			if elapsed > 0.0 {
+				currentSpeed := float64(total) / elapsed
+				amount := int(currentSpeed * 0.05) * 2
+				if amount > 0 && amount > *bulkMessageSize {
+					if amount > (1<<24) {
+						amount = 1<<24
+					}
+					if pm := newPreparedMessage(); pm != nil {
+						preparedMessage = pm
+						*bulkMessageSize = amount
+					}
+				}
+			}
 		}
-		meas.maybePrint(total, subtest)
 	}
 }
 
@@ -133,15 +167,9 @@ func main() {
 			return
 		}
 		defer conn.Close()
-		data := make([]byte, *bulkMessageSize)
-		if _, err := rand.Read(data); err != nil {
-			return
+		if pm := newPreparedMessage(); pm != nil {
+			downloadupload(r.Context(), 10*time.Second, "download", pm, conn)
 		}
-		pm, err := websocket.NewPreparedMessage(websocket.BinaryMessage, data)
-		if err != nil {
-			return
-		}
-		downloadupload(r.Context(), 10*time.Second, "download", pm, conn)
 	})
 	http.HandleFunc("/ndt/v7/upload", func(w http.ResponseWriter, r *http.Request) {
 		if conn := upgrade(w, r); conn != nil {
