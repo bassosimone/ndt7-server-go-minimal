@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+import json, sys
+current = None
+for line in sys.stdin:
+    if not line.strip():
+        continue
+    doc = json.loads(line)
+    if current != doc['Test']:
+        sys.stdout.write('\n')
+        current = doc['Test']
+    if 'AppInfo' not in doc:
+        continue
+    appinfo = doc['AppInfo']
+    speed, unit = (8 * appinfo['NumBytes']) / (appinfo['ElapsedTime'] / 1e06), ' b/s'
+    if speed > 1000:
+        speed, unit = speed / 1000, 'kb/s'
+    if speed > 1000:
+        speed, unit = speed / 1000, 'Mb/s'
+    if speed > 1000:
+        speed, unit = speed / 1000, 'Gb/s'
+    sys.stdout.write('%10s: %10.2f %s\r' % (doc['Test'], speed, unit))
+sys.stdout.write('\n')

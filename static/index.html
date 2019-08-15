@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang='en'>
+<head>
+  <style>
+.row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.result {
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  font-size: 1000%;
+  align: center;
+}
+  </style>
+  <meta charset='utf-8'>
+  <title>ndt7</title>
+</head>
+<body>
+  <div>
+    <div id='download' class='result row'>[Download]</div>
+    <div id='upload' class='result row'>[Upload]</div>
+  </div>
+  <script type='text/javascript'>
+    /* jshint esversion: 6, asi: true */
+    function runTest(testName, callback) {
+      console.log(testName + ': start')
+      let done = false
+      let worker = new Worker('ndt7-' + testName + '.js')
+      function finish() {
+        if (!done) {
+          done = true
+          console.log(testName + ': done')
+          if (callback !== undefined) {
+            callback()
+          }
+        }
+      }
+      worker.onmessage = function (ev) {
+        console.log(ev.data)
+        if (ev.data === null) {
+          finish()
+          return
+        }
+        if (ev.data.AppInfo === undefined) {
+          return
+        }
+        const ai = ev.data.AppInfo
+        let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
+        speed /= 1e06  // Mbit/s
+        const elem = document.getElementById(testName)
+        elem.innerHTML = speed.toFixed(2) + ' Mb/s'
+      }
+      setTimeout(function () {
+        worker.terminate()
+        finish()
+      }, 10000)
+      worker.postMessage({
+        href: window.location.href,
+      })
+    }
+    runTest("download", function () {
+      runTest("upload")
+    })
+  </script>
+</body>
+</html>
