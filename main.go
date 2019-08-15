@@ -12,8 +12,12 @@ import (
 )
 
 const (
-	bulkMessageSize = 1 << 13
-	defaultTimeout  = 7 * time.Second
+	defaultTimeout = 7 * time.Second
+)
+
+var (
+	bulkMessageSize = flag.Int("bulk-message-size", 1<<13, "WebSocket bulk messages size")
+	endpoint        = flag.String("endpoint", ":8080", "Endpoint to listen to")
 )
 
 type measurer struct {
@@ -69,7 +73,7 @@ func downloadupload(
 			if err := conn.WritePreparedMessage(preparedMessage); err != nil {
 				return
 			}
-			total += bulkMessageSize
+			total += *bulkMessageSize
 		}
 		meas.maybePrint(total, subtest)
 	}
@@ -92,8 +96,6 @@ func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 	return conn
 }
 
-var endpoint = flag.String("endpoint", ":8080", "Endpoint to listen to")
-
 func main() {
 	http.HandleFunc("/ndt/v7/download", func(w http.ResponseWriter, r *http.Request) {
 		conn := upgrade(w, r)
@@ -101,7 +103,7 @@ func main() {
 			return
 		}
 		defer conn.Close()
-		data := make([]byte, bulkMessageSize)
+		data := make([]byte, *bulkMessageSize)
 		if _, err := rand.Read(data); err != nil {
 			return
 		}
