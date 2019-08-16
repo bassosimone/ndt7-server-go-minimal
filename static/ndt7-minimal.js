@@ -74,7 +74,7 @@ onmessage = function (ev) {
       const currentSpeed = (tot - sock.bufferedAmount) / (now - start)
       const nextSleep = (sock.bufferedAmount / currentSpeed) / 2
       const target = 50
-      if (!isNaN(nextSleep) && nextSleep < target && data.length < (1<<24)) {
+      if (!isNaN(nextSleep) && nextSleep < target && data.length <= (1<<23)) {
         data = new Uint8Array(data.length << 1)
         // TODO(bassosimone): fill this message
       }
