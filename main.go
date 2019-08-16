@@ -132,9 +132,10 @@ func downloadupload(
 					if amount > (1<<24) {
 						amount = 1<<24
 					}
-					if pm := newPreparedMessage(); pm != nil {
-						preparedMessage = pm
-						*bulkMessageSize = amount
+					*bulkMessageSize = amount
+					preparedMessage = newPreparedMessage()
+					if preparedMessage == nil {
+						return
 					}
 				}
 			}
