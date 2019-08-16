@@ -6,6 +6,9 @@ for line in sys.stdin:
     if not seen and doc['SubTest'] == 'upload':
         sys.stdout.write('\n')
         seen = True
+    if seen and doc['SubTest'] == 'download':
+        sys.stdout.write('\n')
+        seen = False
     if 'Failure' in doc:
         sys.stdout.write('%10s: %s\n' % (doc['SubTest'], doc['Failure']))
         continue
