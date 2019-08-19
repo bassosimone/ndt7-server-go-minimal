@@ -3,54 +3,69 @@ package main
 import (
 	"context"
 	"log"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-// receiverLoop receives binary messages and sends feedback.
-func receiverLoop(ctx context.Context, conn *websocket.Conn) {
-	begin := time.Now()
+type receiver struct {
+	begin time.Time
+	conn  *websocket.Conn
+	mutex sync.Mutex
+	ri    ReceiverInfo
+}
+
+func (r *receiver) receiverLoop(ctx context.Context) {
 	var count int64
-	previous := begin
-	conn.SetReadLimit(SpecMaxMessageSize)
+	r.conn.SetReadLimit(SpecMaxBinaryMessageSize)
 	for ctx.Err() == nil {
-		_, mdata, err := conn.ReadMessage()
+		_, mdata, err := r.conn.ReadMessage()
 		if err != nil {
-			log.Printf("receiverLoop: conn.ReadMessage: %s", err.Error())
+			log.Printf("receiver.receiverLoop: conn.ReadMessage: %s", err.Error())
 			return
 		}
 		count += int64(len(mdata))
-		now := time.Now()
-		const measurementInterval = 250 * time.Millisecond
-		if now.Sub(previous) < measurementInterval {
-			continue
-		}
-		ri := ReceiverInfo{
-			ElapsedSeconds: now.Sub(previous).Seconds(),
-			NumBytes      : count,
-		}
-		err = conn.WriteJSON(ri)
+		r.mutex.Lock()
+		r.ri.ElapsedSeconds = time.Now().Sub(r.begin).Seconds()
+		r.ri.NumBytes = count
+		r.mutex.Unlock()
+	}
+}
+
+func (r *receiver) senderLoop(ctx context.Context) {
+	for ctx.Err() == nil {
+		time.Sleep(250 * time.Millisecond)
+		var ri ReceiverInfo
+		r.mutex.Lock()
+		ri = r.ri
+		r.mutex.Unlock()
+		//log.Printf("receiver.senderLoop: %f %d", ri.ElapsedSeconds, ri.NumBytes)
+		err := r.conn.WriteJSON(ri)
 		if err != nil {
-			log.Printf("receiverLoop: conn.WriteJSON: %s", err.Error())
+			log.Printf("receiver.senderLoop: conn.WriteJSON: %s", err.Error())
 			return
 		}
 	}
 }
 
-// ReceiverMain takes ownership of |conn| and sends data to the peer for 10 s.
-func ReceiverMain(ctx context.Context, conn *websocket.Conn) {
+func receiverMain(ctx context.Context, conn *websocket.Conn) {
 	defer conn.Close()
 	const timeout = 15 * time.Second
 	if err := conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		log.Printf("Receiver: conn.SetReadDeadline: %s", err.Error())
+		log.Printf("receiverMain: conn.SetReadDeadline: %s", err.Error())
 		return
 	}
 	if err := conn.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
-		log.Printf("Receiver: conn.SetWriteDeadline: %s", err.Error())
+		log.Printf("receiverMain: conn.SetWriteDeadline: %s", err.Error())
 		return
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	receiverLoop(ctx, conn)
+	r := &receiver{
+		begin: time.Now(),
+		conn:  conn,
+	}
+	go r.senderLoop(ctx)
+	r.receiverLoop(ctx)
 }

@@ -4,129 +4,127 @@ import (
 	"context"
 	"encoding/json"
 	"log"
+	"math"
+	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
 )
 
-// senderReceiver receives measurements from the receiver.
-func senderReceiver(ctx context.Context, conn *websocket.Conn) <-chan ReceiverInfo {
-	const channelBuffer = 40
-	ch := make(chan ReceiverInfo, channelBuffer)
-	go func(ch chan<- ReceiverInfo) {
-		const maxMessageSize = 1 << 10
-		conn.SetReadLimit(maxMessageSize)
-		defer close(ch)
-		for ctx.Err() == nil {
-			mtype, mdata, err := conn.ReadMessage()
-			if err != nil {
-				log.Printf("senderReceiver: conn.ReadMessage: %s", err.Error())
-				return
-			}
-			if mtype != websocket.TextMessage {
-				log.Printf("senderReceiver: invalid message type")
-				return
-			}
-			var ri ReceiverInfo
-			err = json.Unmarshal(mdata, &ri)
-			if err != nil {
-				log.Printf("senderReceiver: json.Unmarshal: %s", err.Error())
-				return
-			}
-			ch <- ri
-		}
-	}(ch)
-	return ch
+type sender struct {
+	conn  *websocket.Conn
+	mutex sync.Mutex
+	ri    ReceiverInfo
 }
 
-// senderETA returns the amount of seconds we have in queue
-func senderETA(ri ReceiverInfo, queuedBytes int64) (ETA float64) {
-	speedSample := float64(ri.NumBytes) / ri.ElapsedSeconds
-	notSentBytes := queuedBytes - ri.NumBytes
-	if notSentBytes > 0 {
-		ETA = float64(notSentBytes) / speedSample
+func (s *sender) prepareMessage(size int) *websocket.PreparedMessage {
+	data := make([]byte, size)
+	pm, err := websocket.NewPreparedMessage(websocket.BinaryMessage, data)
+	if err != nil {
+		pm = nil
 	}
-	return
+	return pm
 }
 
-// senderAdjustMessageSize possibly changes the message size.
-func senderAdjustMessageSize(ri ReceiverInfo, curSize *int) bool {
-	speedSample := float64(ri.NumBytes) / ri.ElapsedSeconds
-	const desiredReceiveTimeSecond = 0.25
-	desiredSize := speedSample * desiredReceiveTimeSecond
-	if desiredSize < float64(*curSize) * 1.2 {
-		return false
-	}
-	if desiredSize > float64(SpecMaxMessageSize) {
-		desiredSize = float64(SpecMaxMessageSize)
-	}
-	*curSize = int(desiredSize)
-	return true
-}
-
-// senderSender sends binary messages to the receiver.
-func senderSender(ctx context.Context, conn *websocket.Conn, ch <-chan ReceiverInfo) {
-	var binaryMessage *websocket.PreparedMessage
-	curSize := SpecInitialMessageSize
-	var queuedBytes int64
-	var ETA float64
+func (s *sender) senderLoop(ctx context.Context) {
+	size := SpecInitialBinaryMessageSize
+	var pm *websocket.PreparedMessage
+	var total int64
 	for ctx.Err() == nil {
-		select {
-		case ri, ok := <-ch:
-			if !ok {
-				log.Print("senderSender: channel closed")
+		var ri ReceiverInfo
+		s.mutex.Lock()
+		ri = s.ri
+		s.ri = ReceiverInfo{}
+		s.mutex.Unlock()
+		if ri.ElapsedSeconds > 0.0 && ri.NumBytes > 0 {
+			log.Printf("sender.senderLoop: %f %d", ri.ElapsedSeconds, ri.NumBytes)
+			speed := float64(ri.NumBytes) / ri.ElapsedSeconds
+			// Scale binary message to the desired size so that we reduce the
+			// number of callbacks that we trigger on the receiver.
+			const desiredSendsPerSecond = 16.0
+			desiredSize := speed / desiredSendsPerSecond
+			offset := uint(math.Ceil(math.Log2(desiredSize)))
+			if offset < SpecInitialBinaryMessageSizeExponent {
+				offset = SpecInitialBinaryMessageSizeExponent
+			} else if offset > SpecMaxBinaryMessageSizeExponent {
+				offset = SpecMaxBinaryMessageSizeExponent
+			}
+			integralSize := 1 << offset
+			if integralSize > size {
+				log.Printf("sender.senderLoop: scaling to %d", integralSize)
+				size = integralSize
+				pm = nil
+			}
+			// Decide whether we've created too much queue and, in such case, pause
+			// the sender to give the queue some time t breathe.
+			unsentByExcess := total - ri.NumBytes
+			drainTime := float64(unsentByExcess) / speed
+			const tooManySecondsOfQueue = 10.0
+			if drainTime > tooManySecondsOfQueue {
+				log.Printf("sender.senderLoop: drain time: %f", drainTime)
+				time.Sleep(250 * time.Millisecond)
+				continue
+			}
+		}
+		if pm == nil {
+			pm = s.prepareMessage(size)
+			if pm == nil {
+				log.Print("sender.senderLoop: cannot prepare message")
 				return
 			}
-			if ri.ElapsedSeconds <= 0.0 || ri.NumBytes <= 0 {
-				log.Print("senderSender: received invalid message")
-				return
-			}
-			ETA = senderETA(ri, queuedBytes)
-			if senderAdjustMessageSize(ri, &curSize) {
-				binaryMessage = nil
-				// FALLTHROUGH
-			}
-			continue // Process consecutive messages
-		default:
-			// NOTHING
 		}
-		if ETA > 10.0 {
-			log.Printf("ETA: %f", ETA)
-			time.Sleep(250 * time.Millisecond)
-			// FALLTHROUGH
-		}
-		if binaryMessage == nil {
-			log.Printf("senderSender: new message size: %d", curSize)
-			data := make([]byte, curSize)
-			var err error
-			binaryMessage, err = websocket.NewPreparedMessage(
-				websocket.BinaryMessage, data,
-			)
-			if err != nil {
-				log.Printf("senderSender: websocket.PreparedMesage: %s", err.Error())
-				return
-			}
-		}
-		if err := conn.WritePreparedMessage(binaryMessage); err != nil {
+		err := s.conn.WritePreparedMessage(pm)
+		if err != nil {
+			log.Printf("sender.senderLoop: conn.WritePreparedMessage: %s", err.Error())
 			return
 		}
-		queuedBytes += int64(curSize)
+		total += int64(size)
 	}
 }
 
-// SenderMain takes ownership of |conn| and sends data to the peer for 10 s.
-func SenderMain(ctx context.Context, conn *websocket.Conn) {
+func (s *sender) receiverLoop(ctx context.Context) {
+	s.conn.SetReadLimit(SpecMaxTextMessageSize)
+	for ctx.Err() == nil {
+		mtype, mdata, err := s.conn.ReadMessage()
+		if err != nil {
+			log.Printf("sender.receiverLoop: conn.ReadMessage: %s", err.Error())
+			return
+		}
+		if mtype != websocket.TextMessage {
+			log.Print("sender.receiverLoop: non textual message")
+			return
+		}
+		var ri ReceiverInfo
+		err = json.Unmarshal(mdata, &ri)
+		if err != nil {
+			log.Printf("sender.receiverLoop: json.Unmarshal: %s", err.Error())
+			return
+		}
+		if ri.ElapsedSeconds <= 0.0 || ri.NumBytes <= 0 {
+			log.Print("sender.receiverLoop: message values out of range")
+			return
+		}
+		//log.Printf("sender.receiverLoop: %f %d", ri.ElapsedSeconds, ri.NumBytes)
+		s.mutex.Lock()
+		s.ri = ri
+		s.mutex.Unlock()
+	}
+}
+
+func senderMain(ctx context.Context, conn *websocket.Conn) {
 	defer conn.Close()
 	const timeout = 10 * time.Second
 	if err := conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
-		log.Printf("Sender: conn.SetReadDeadline: %s", err.Error())
+		log.Printf("senderMain: conn.SetReadDeadline: %s", err.Error())
 		return
 	}
 	if err := conn.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
-		log.Printf("Sender: conn.SetWriteDeadline: %s", err.Error())
+		log.Printf("senderMain: conn.SetWriteDeadline: %s", err.Error())
 		return
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
-	senderSender(ctx, conn, senderReceiver(ctx, conn))
+	s := &sender{conn: conn}
+	go s.receiverLoop(ctx)
+	s.senderLoop(ctx)
 }
