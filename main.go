@@ -29,6 +29,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -143,6 +144,93 @@ func downloadupload(
 	}
 }
 
+type Message struct {
+	ElapsedSeconds float64
+	NumBytes       int64
+	Origin         string
+	SubTest        string
+}
+
+func download(
+	ctx context.Context, timeout time.Duration, subtest string,
+	preparedMessage *websocket.PreparedMessage, conn *websocket.Conn,
+) {
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+	mchan := make(chan Message)
+	// Receive speed samples from the client
+	go func() {
+		conn.SetReadLimit(1 << 24)
+		defer close(mchan)
+		if err := conn.SetReadDeadline(time.Now().Add(timeout)); err != nil {
+			return
+		}
+		for ctx.Err() == nil {
+			mtype, mdata, err := conn.ReadMessage()
+			if err != nil {
+				return
+			}
+			if mtype != websocket.TextMessage {
+				return
+			}
+			var message Message
+			err = json.Unmarshal(mdata, &message)
+			if err != nil {
+				return
+			}
+			mchan <- message
+		}
+	}()
+	// Send data to the client
+	if err := conn.SetWriteDeadline(time.Now().Add(timeout)); err != nil {
+		return
+	}
+	start := time.Now()
+	var queued int64
+	for ctx.Err() == nil {
+		select {
+		case message := <-mchan:
+			if message.ElapsedSeconds > 0.0 {
+				speed := float64(message.NumBytes) / message.ElapsedSeconds
+				realElapsed := time.Now().Sub(start).Seconds()
+				fmt.Printf("realElapsed: %f\n", realElapsed)
+				// Possibly stop early if we've buffered too much already
+				if realElapsed >= message.ElapsedSeconds {
+					maybeSent := int64(speed * (realElapsed - message.ElapsedSeconds))
+					notSentEstimate := queued - (message.NumBytes + maybeSent)
+					if notSentEstimate > 0 {
+						eta := (float64(notSentEstimate) / speed) + realElapsed
+						fmt.Printf("ETA: %f\n", eta)
+						if eta >= 15.0 {
+							return
+						}
+					}
+				}
+				// Adapt the bulk message size to reduce receiver's overhead
+				optimalSize := int64(speed * 0.1)
+				if int(optimalSize) > *bulkMessageSize {
+				} else if int(optimalSize) < *bulkMessageSize {
+				}
+				if int(optimalSize) > *bulkMessageSize && *bulkMessageSize < (1 << 23) {
+					fmt.Printf("scaling: %d => %d\n", *bulkMessageSize, *bulkMessageSize * 2)
+					*bulkMessageSize *= 2
+					preparedMessage = newPreparedMessage()
+					if preparedMessage == nil {
+						return
+					}
+				}
+			}
+			continue // Process consecutive messages
+		default:
+			// NOTHING
+		}
+		if err := conn.WritePreparedMessage(preparedMessage); err != nil {
+			return
+		}
+		queued += int64(*bulkMessageSize)
+	}
+}
+
 func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 	const proto = "net.measurementlab.ndt.v7"
 	if r.Header.Get("Sec-WebSocket-Protocol") != proto {
@@ -163,13 +251,9 @@ func upgrade(w http.ResponseWriter, r *http.Request) *websocket.Conn {
 func main() {
 	flag.Parse()
 	http.HandleFunc("/ndt/v7/download", func(w http.ResponseWriter, r *http.Request) {
-		conn := upgrade(w, r)
-		if conn == nil {
-			return
-		}
-		defer conn.Close()
-		if pm := newPreparedMessage(); pm != nil {
-			downloadupload(r.Context(), 10*time.Second, "download", pm, conn)
+		conn := UpgraderUpgrade(w, r)
+		if conn != nil {
+			SenderMain(r.Context(), conn)
 		}
 	})
 	http.HandleFunc("/ndt/v7/upload", func(w http.ResponseWriter, r *http.Request) {

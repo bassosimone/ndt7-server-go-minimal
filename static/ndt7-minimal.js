@@ -9,9 +9,11 @@ onmessage = function (ev) {
     url.pathname = '/ndt/v7/download'
     const sock = new WebSocket(url.toString(), wsproto)
     sock.onclose = function () {
-      callback()
+      console.log(new Date().getTime())
+      //callback()
     }
     sock.onopen = function () {
+      console.log(new Date().getTime())
       const start = new Date().getTime()
       let previous = start
       let tot = 0
@@ -20,11 +22,14 @@ onmessage = function (ev) {
         let now = new Date().getTime()
         const every = 250  // ms
         if (now - previous > every) {
-          postMessage({
-            'elapsed': (now - start) / 1000,  // s
-            'numBytes': tot,
-            'subTest': 'download',
-          })
+          const message = {
+            'ElapsedSeconds': (now - start) / 1000, // s
+            'NumBytes': tot,
+            'Origin': 'client',
+            'SubTest': 'download',
+          }
+          sock.send(JSON.stringify(message))
+          postMessage(message)
           previous = now
         }
       }
@@ -58,9 +63,10 @@ onmessage = function (ev) {
       const every = 250  // millisecond
       if (now - previous > every) {
         postMessage({
-          'elapsed': (now - start) / 1000,  // s
-          'numBytes': (tot - sock.bufferedAmount),
-          'subTest': 'upload',
+          'ElapsedSeconds': (now - start) / 1000,  // s
+          'NumBytes': (tot - sock.bufferedAmount),
+          'Origin': 'client',
+          'SubTest': 'upload',
         })
         previous = now
       }

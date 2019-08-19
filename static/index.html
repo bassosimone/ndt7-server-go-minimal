@@ -29,10 +29,10 @@
     /* jshint esversion: 6, asi: true */
     let worker = new Worker('ndt7-minimal.js')
     worker.onmessage = function (ev) {
-      if (ev.data.elapsed !== undefined && ev.data.numBytes !== undefined &&
-          ev.data.subTest !== undefined) {
-        const speed = 8 * ev.data.numBytes / ev.data.elapsed / 1000 / 1000
-        const elem = document.getElementById(ev.data.subTest)
+      if (ev.data.ElapsedSeconds !== undefined && ev.data.NumBytes !== undefined &&
+          ev.data.SubTest !== undefined) {
+        const speed = 8 * ev.data.NumBytes / ev.data.ElapsedSeconds / 1000 / 1000
+        const elem = document.getElementById(ev.data.SubTest)
         elem.innerHTML = speed.toFixed(2) + ' Mb/s'
       }
     }
