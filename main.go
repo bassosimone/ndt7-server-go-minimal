@@ -5,8 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
@@ -119,9 +119,10 @@ func upgrade(w http.ResponseWriter, r *http.Request) (*websocket.Conn, error) {
 }
 
 var (
-	flagCert     = flag.String("cert", "cert.pem", "TLS certificate to use")
-	flagEndpoint = flag.String("endpoint", ":443", "Endpoint to listen to")
-	flagKey      = flag.String("key", "key.pem", "TLS private key to use")
+	flagCert              = flag.String("cert", "cert.pem", "TLS certificate to use")
+	flagEndpointCleartext = flag.String("endpoint-cleartext", ":80", "Cleartext endpoint to listen to")
+	flagEndpointTLS       = flag.String("endpoint-tls", ":443", "TLS endpoint to listen to")
+	flagKey               = flag.String("key", "key.pem", "TLS private key to use")
 )
 
 func main() {
@@ -137,5 +138,11 @@ func main() {
 		}
 	})
 	http.Handle("/", http.FileServer(http.Dir("static")))
-	log.Fatal(http.ListenAndServeTLS(*flagEndpoint, *flagCert, *flagKey, nil))
+	go func() {
+		log.Fatal(http.ListenAndServeTLS(*flagEndpointTLS, *flagCert, *flagKey, nil))
+	}()
+	go func() {
+		log.Fatal(http.ListenAndServe(*flagEndpointCleartext, nil))
+	}()
+	<-context.Background().Done()
 }
