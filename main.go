@@ -5,6 +5,8 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 	"time"
@@ -36,14 +38,22 @@ func uploadTest(ctx context.Context, conn *websocket.Conn) error {
 	ticker := time.NewTicker(measureInterval)
 	defer ticker.Stop()
 	for ctx.Err() == nil {
-		kind, data, err := conn.ReadMessage()
+		kind, reader, err := conn.NextReader()
 		if err != nil {
 			return err
 		}
 		if kind == websocket.TextMessage {
+			data, err := ioutil.ReadAll(reader)
+			if err != nil {
+				return err
+			}
 			fmt.Printf("%s\n", string(data))
 		}
-		total += int64(len(data))
+		n, err := io.Copy(ioutil.Discard, reader)
+		if err != nil {
+			return err
+		}
+		total += int64(n)
 		select {
 		case <-ticker.C:
 			emitAppInfo(start, total, "download")
