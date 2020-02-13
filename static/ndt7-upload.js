@@ -35,11 +35,7 @@ onmessage = function (ev) {
       })
       previous = now
     }
-    const drainSpeed = (total - sock.bufferedAmount) / (now - start)
-    const nextSleep = (sock.bufferedAmount / drainSpeed) / 2
-    setTimeout(function() {
-      uploader(sock, data, start, previous, total)
-    }, nextSleep)
+    setTimeout(function() { uploader(sock, data, start, previous, total); }, 0)
   }
   sock.onopen = function () {
     const data = new Uint8Array(1<<13) // TODO(bassosimone): fill this message
