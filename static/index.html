@@ -2,34 +2,11 @@
 <html lang="en">
 <head>
   <script type="text/javascript" src="ndt7-core.js"></script>
-  <style>
-.row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  width: 100%;
-}
-
-.result {
-  position: relative;
-  align-items: center;
-  justify-content: center;
-  font-size: 1000%;
-  align: center;
-}
-  </style>
-  <meta charset="utf-8">
-  <title>ndt7 Speed Test</title>
-</head>
-<body>
-  <div>
-    <div id="download" class="result row">[Download]</div>
-    <div id="upload" class="result row">[Upload]</div>
-  </div>
   <script type="text/javascript">
     /* jshint esversion: 6, asi: true */
     function runTest(testName, callback) {
-      ndt7.run(window.location.href, testName, {
+      const url = window.location
+      ndt7.run(url.origin + url.pathname, testName, {
         onstarting: function () {
           console.log(testName + ": starting")
         },
@@ -52,9 +29,35 @@
         },
       })
     }
-    runTest("download", function () {
-      runTest("upload")
-    })
+    function runBoth() {
+      if (document.getElementById("accepted").checked !== true) {
+        alert("You need to agree to data policy first")
+        return
+      }
+      runTest("download", function () {
+        runTest("upload")
+      })
+    }
   </script>
+  <meta charset="utf-8">
+  <title>ndt7 Speed Test</title>
+</head>
+<body>
+  <h1>Test Your Speed</h1>
+  <div>M-Lab's Speed Test provides advanced diagnostics of
+    the performance of your broadband connection through quick measurements.</div>
+  <div>
+    <input type="checkbox" id="accepted">
+    <label>I agree to the <a href="https://www.measurementlab.net/privacy/">data
+        policy</a>, which includes retention and publication of IP addresses.</label>
+  </div>
+  <a href="#" onclick="runBoth()">Run</a>
+  <div>For more on M-Lab's data collection and measurement, including the disclosure
+    of IP addresses, see our <a href="https://www.measurementlab.net/privacy/">Privacy
+      Policy</a>.</div>
+  <div>
+    <div><span>download: </span><span id="download">[download]</span></div>
+    <div><span>upload: </span><span id="upload">[upload]</span></div>
+  </div>
 </body>
 </html>
