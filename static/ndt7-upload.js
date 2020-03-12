@@ -1,4 +1,5 @@
 /* jshint esversion: 6, asi: true, worker: true */
+// WebWorker that runs the ndt7 upload test
 onmessage = function (ev) {
   'use strict'
   let url = new URL(ev.data.href)
@@ -16,8 +17,9 @@ onmessage = function (ev) {
       sock.close()
       return
     }
-    if (data.length < (1<<24) && data.length < (total - sock.bufferedAmount)/16) {
-      data = new Uint8Array(data.length << 1) // TODO(bassosimone): fill this message
+    const maxMessageSize = 16777216 /* = (1<<24) = 16MB */
+    if (data.length < maxMessageSize && data.length < (total - sock.bufferedAmount)/16) {
+      data = new Uint8Array(data.length * 2) // TODO(bassosimone): fill this message
     }
     const underbuffered = 7 * data.length
     while (sock.bufferedAmount < underbuffered) {
@@ -31,14 +33,18 @@ onmessage = function (ev) {
           'ElapsedTime': (now - start) * 1000,  // us
           'NumBytes': (total - sock.bufferedAmount),
         },
+        'Origin': 'client',
         'Test': 'upload',
       })
       previous = now
     }
-    setTimeout(function() { uploader(sock, data, start, previous, total); }, 0)
+    setTimeout(
+      function() { uploader(sock, data, start, previous, total) },
+      0)
   }
   sock.onopen = function () {
-    const data = new Uint8Array(1<<13) // TODO(bassosimone): fill this message
+    const initialMessageSize = 8192 /* (1<<13) */
+    const data = new Uint8Array(initialMessageSize) // TODO(bassosimone): fill this message
     sock.binarytype = 'arraybuffer'
     const start = new Date().getTime()
     uploader(sock, data, start, start, 0)
