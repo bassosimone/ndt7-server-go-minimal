@@ -1,13 +1,13 @@
 /* jshint esversion: 6, asi: true, worker: true */
 // WebWorker that runs the ndt7 download test
 onmessage = function (ev) {
-  'use strict'
+  "use strict"
   let url = new URL(ev.data.href)
-  url.protocol = (url.protocol === 'https:') ? 'wss:' : 'ws:'
-  url.pathname = '/ndt/v7/download'
-  const sock = new WebSocket(url.toString(), 'net.measurementlab.ndt.v7')
+  url.protocol = (url.protocol === "https:") ? "wss:" : "ws:"
+  url.pathname = "/ndt/v7/download"
+  const sock = new WebSocket(url.toString(), "net.measurementlab.ndt.v7")
   sock.onclose = function () {
-    postMessage(null)
+    postMessage()
   }
   sock.onopen = function () {
     const start = new Date().getTime()
@@ -19,19 +19,19 @@ onmessage = function (ev) {
       const every = 250  // ms
       if (now - previous > every) {
         postMessage({
-          'AppInfo': {
-            'ElapsedTime': (now - start) * 1000,  // us
-            'NumBytes': total,
+          "AppInfo": {
+            "ElapsedTime": (now - start) * 1000,  // us
+            "NumBytes": total,
           },
-          'Origin': 'client',
-          'Test': 'download',
+          "Origin": "client",
+          "Test": "download",
         })
         previous = now
       }
       if (!(ev.data instanceof Blob)) {
         let m = JSON.parse(ev.data)
-        m.Origin = 'server'
-        m.Test = 'download'
+        m.Origin = "server"
+        m.Test = "download"
         postMessage(m)
       }
     }

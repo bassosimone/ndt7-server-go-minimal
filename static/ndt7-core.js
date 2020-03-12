@@ -6,20 +6,20 @@ const ndt7 = (function() {
     // handler's callbacks to notify the caller of ndt7 events.
     run: function(baseURL, testName, handler) {
       if (handler !== undefined && handler.onstarting !== undefined) {
-        handler.onstarting({Origin: 'client', Test: testName})
+        handler.onstarting({Origin: "client", Test: testName})
       }
       let done = false
-      let worker = new Worker('ndt7-' + testName + '.js')
+      let worker = new Worker("ndt7-" + testName + ".js")
       function finish() {
         if (!done) {
           done = true
           if (handler !== undefined && handler.oncomplete !== undefined) {
-            handler.oncomplete({Origin: 'client', Test: testName})
+            handler.oncomplete({Origin: "client", Test: testName})
           }
         }
       }
       worker.onmessage = function (ev) {
-        if (ev.data === null) {
+        if (ev.data === undefined) {
           finish()
           return
         }
