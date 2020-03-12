@@ -6,7 +6,8 @@
     /* jshint esversion: 6, asi: true */
     function runTest(testName, callback) {
       const url = window.location
-      ndt7.run(url.origin + url.pathname, testName, {
+      const config = {
+        baseURL: url.origin + url.pathname,
         onstarting: function () {
           console.log(testName + ": starting")
         },
@@ -27,13 +28,16 @@
             callback()
           }
         },
-      })
+        testName: testName,
+        userAcceptedDataPolicy: document.getElementById("accepted").checked === true,
+      }
+      try {
+        ndt7.run(config)
+      } catch (error) {
+        alert(error)
+      }
     }
     function runBoth() {
-      if (document.getElementById("accepted").checked !== true) {
-        alert("You need to agree to data policy first")
-        return
-      }
       runTest("download", function () {
         runTest("upload")
       })
