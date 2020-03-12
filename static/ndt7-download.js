@@ -1,4 +1,5 @@
 /* jshint esversion: 6, asi: true, worker: true */
+// WebWorker that runs the ndt7 download test
 onmessage = function (ev) {
   'use strict'
   let url = new URL(ev.data.href)
@@ -22,9 +23,16 @@ onmessage = function (ev) {
             'ElapsedTime': (now - start) * 1000,  // us
             'NumBytes': total,
           },
+          'Origin': 'client',
           'Test': 'download',
         })
         previous = now
+      }
+      if (!(ev.data instanceof Blob)) {
+        let m = JSON.parse(ev.data)
+        m.Origin = 'server'
+        m.Test = 'download'
+        postMessage(m)
       }
     }
   }
