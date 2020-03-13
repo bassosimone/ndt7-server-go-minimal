@@ -34,6 +34,7 @@
       <tr><td>server:</td><td id="server">[N/A]</td></tr>
       <tr><td>download:</td><td id="download">[download]</td></tr>
       <tr><td>upload:</td><td id="upload">[upload]</td></tr>
+      <tr><td>ping:</td><td id="ping">[ping]</td></tr>
     </tbody></table>
   </div>
 
@@ -63,14 +64,20 @@
         },
         onmeasurement: function (ev) {
           console.log(ev)
-          if (ev.AppInfo === undefined) {
-            return
+          if (ev.AppInfo !== undefined && ev.Origin === "client") {
+            const ai = ev.AppInfo
+            let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
+            speed /= 1e06  // Mbit/s
+            const elem = document.getElementById(testName)
+            elem.innerHTML = speed.toFixed(2) + " Mb/s"
           }
-          const ai = ev.AppInfo
-          let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
-          speed /= 1e06  // Mbit/s
-          const elem = document.getElementById(testName)
-          elem.innerHTML = speed.toFixed(2) + " Mb/s"
+          if (ev.TCPInfo !== undefined && ev.Origin === "server") {
+            if (ev.TCPInfo.MinRTT !== undefined) {
+              const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
+              const elem = document.getElementById("ping")
+              elem.innerHTML = minrtt.toFixed(1) + " ms"
+            }
+          }
         },
         oncomplete: function() {
           document.getElementById("run").disabled = false
