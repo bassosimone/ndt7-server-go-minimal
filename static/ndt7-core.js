@@ -2,9 +2,6 @@
 // ndt7 is a simple ndt7 client.
 const ndt7 = (function() {
   function startWithBaseURL(config) {
-    if (config === undefined || config.userAcceptedDataPolicy !== true) {
-      throw "fatal: user must accept data policy first"
-    }
     if (config.onstarting !== undefined) {
       config.onstarting()
     }
@@ -70,6 +67,9 @@ const ndt7 = (function() {
     //
     // - `oncomplete` (`function()`) is the optional callback called when done;
     //
+    // - `onlocate` (`function({fqdn: ""})`) is the optional callback called when
+    //   the locate service has discovered a valid server;
+    //
     // - `onmeasurement` (`function(measurement)`) is the optional callback
     //   called when a new measurement object is emitted (see below);
     //
@@ -84,13 +84,19 @@ const ndt7 = (function() {
     // The measurement object is described by the ndt7 specification. See
     // https://github.com/m-lab/ndt-server/blob/master/spec/ndt7-protocol.md.
     start: function start(config) {
+      if (config === undefined || config.userAcceptedDataPolicy !== true) {
+        throw "fatal: user must accept data policy first"
+      }
       if (config.baseURL !== undefined && config.baseURL !== "") {
         startWithBaseURL(config)
         return
       }
       locate({
         callback: function (fqdn) {
-          config.baseURL = fqdn
+          if (config.onlocate !== undefined) {
+            config.onlocate({"fqdn": fqdn.split(".")[0]})
+          }
+          config.baseURL = "https://" + fqdn
           startWithBaseURL(config)
         },
       })
