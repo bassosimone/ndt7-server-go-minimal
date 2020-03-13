@@ -21,9 +21,15 @@ onmessage = function (ev) {
     if (data.length < maxMessageSize && data.length < (total - sock.bufferedAmount)/16) {
       data = new Uint8Array(data.length * 2) // TODO(bassosimone): fill this message
     }
+    // Safari 13.0.5 does not seem to update bufferedAmount fast enough, so we
+    // end up spinning forever inside this loop. For this reason, add one extra
+    // condition that we don't want to buffer more than underbuffered bytes in
+    // the worst case when we're looping here.
+    let bufferednow = 0
     const underbuffered = 7 * data.length
-    while (sock.bufferedAmount < underbuffered) {
+    while (sock.bufferedAmount < underbuffered && bufferednow < underbuffered) {
       sock.send(data)
+      bufferednow += data.length
       total += data.length
     }
     const every = 250  // millisecond
