@@ -8,50 +8,6 @@
   <title>ndt7 Speed Test</title>
 
 </head><body>
-<div class="container">
-
-  <div class="row">
-    <h1>Test Your Speed</h1>
-    <p>M-Lab's Speed Test provides advanced diagnostics of the performance
-      of your broadband connection through quick measurements.</p>
-    <form>
-    <label>
-      <input type="checkbox" id="accepted">
-      I agree to the <a href="https://www.measurementlab.net/privacy/">data
-      policy</a>, which includes retention and publication of IP addresses.
-    </label>
-    <button type="button" class="btn btn-primary btn-sm" id="run"
-      onclick="runBoth()">Run</button>
-    </form>
-    <p>For more on M-Lab's data collection and measurement, including the
-      disclosure of IP addresses, see our
-      <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
-  </div>
-
-  <div class="row">
-    <h2>Results</h2>
-    <table class="table table-bordered table-hover"><tbody>
-      <tr><td>server:</td><td id="server">[N/A]</td></tr>
-      <tr><td>download:</td><td id="download">[download]</td></tr>
-      <tr><td>upload:</td><td id="upload">[upload]</td></tr>
-      <tr><td>ping:</td><td id="ping">[ping]</td></tr>
-    </tbody></table>
-  </div>
-
-  <div class="row">
-    <h2>About</h2>
-    <p><a href="https://www.measurementlab.net/">Measurement Lab</a> (M-Lab)
-      provides the largest collection of open Internet performance data on
-      the planet. As a consortium of research, industry, and public-interest
-      partners, M-Lab is dedicated to providing an ecosystem for the open,
-      verifiable measurement of global network performance.</p>
-  </div>
-
-</div>
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-  <script src="ndt7-core.js"></script>
 
   <script>
     /* jshint esversion: 6, asi: true */
@@ -106,4 +62,50 @@
       })
     }
   </script>
+
+<div class="container">
+
+  <div class="row">
+    <h1>Test Your Speed</h1>
+    <p>M-Lab's Speed Test provides advanced diagnostics of the performance
+      of your broadband connection through quick measurements.</p>
+    <form>
+    <label>
+      <input type="checkbox" id="accepted">
+      I agree to the <a href="https://www.measurementlab.net/privacy/">data
+      policy</a>, which includes retention and publication of IP addresses.
+    </label>
+    <button type="button" class="btn btn-primary btn-sm" id="run"
+      onclick="runBoth()">Run</button>
+    </form>
+    <p>For more on M-Lab's data collection and measurement, including the
+      disclosure of IP addresses, see our
+      <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
+  </div>
+
+  <div class="row">
+    <h2>Results</h2>
+    <table class="table table-bordered table-hover"><tbody>
+      <tr><td>server:</td><td id="server">[N/A]</td></tr>
+      <tr><td>download:</td><td id="download">[download]</td></tr>
+      <tr><td>upload:</td><td id="upload">[upload]</td></tr>
+      <tr><td>ping:</td><td id="ping">[ping]</td></tr>
+    </tbody></table>
+  </div>
+
+  <div class="row">
+    <h2>About</h2>
+    <p><a href="https://www.measurementlab.net/">Measurement Lab</a> (M-Lab)
+      provides the largest collection of open Internet performance data on
+      the planet. As a consortium of research, industry, and public-interest
+      partners, M-Lab is dedicated to providing an ecosystem for the open,
+      verifiable measurement of global network performance.</p>
+  </div>
+
+</div>
+  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+  <script src="ndt7-core.js"></script>
+
 </body></html>
