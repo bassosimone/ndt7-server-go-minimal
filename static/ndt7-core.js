@@ -85,7 +85,7 @@ const ndt7 = (function() {
         config.onstarting()
       }
       let done = false
-      let worker = new Worker("ndt7-" + config.testName + ".js")
+      let worker = new Worker(`ndt7-${config.testName}.js`)
       function finish() {
         if (!done) {
           done = true
