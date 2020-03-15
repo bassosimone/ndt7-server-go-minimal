@@ -60,13 +60,28 @@
       console.log("ndt7: complete")
     }
 
+    function formatSpeedWithUnit(speed) {
+      if (speed < 1e03) {
+        return `${speed.toFixed(2)} bit/s`
+      }
+      speed /= 1e03
+      if (speed < 1e03) {
+        return `${speed.toFixed(2)} kbit/s`
+      }
+      speed /= 1e03
+      if (speed < 1e03) {
+        return `${speed.toFixed(2)} Mbit/s`
+      }
+      speed /= 1e03
+      return `${speed.toFixed(2)} Gbit/s`
+    }
+
     function viewMaybeUpdateSpeed(testName, ev) {
       if (ev.AppInfo !== undefined && ev.Origin === "client") {
         const ai = ev.AppInfo
         let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
-        speed /= 1e06  // Mbit/s
         const elem = document.getElementById(testName)
-        elem.innerHTML = speed.toFixed(2) + " Mb/s"
+        elem.innerHTML = formatSpeedWithUnit(speed)
       }
     }
 
