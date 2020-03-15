@@ -21,6 +21,26 @@
       document.getElementById("spinner").style.visibility = "hidden"
     }
 
+    function viewMaybeUpdateSpeed(testName, ev) {
+      if (ev.AppInfo !== undefined && ev.Origin === "client") {
+        const ai = ev.AppInfo
+        let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
+        speed /= 1e06  // Mbit/s
+        const elem = document.getElementById(testName)
+        elem.innerHTML = speed.toFixed(2) + " Mb/s"
+      }
+    }
+
+    function viewMaybeUpdateMinRTT(ev) {
+      if (ev.TCPInfo !== undefined && ev.Origin === "server") {
+        if (ev.TCPInfo.MinRTT !== undefined) {
+          const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
+          const elem = document.getElementById("ping")
+          elem.innerHTML = minrtt.toFixed(1) + " ms"
+        }
+      }
+    }
+
     function runTest(testName, callback) {
       const url = window.location
       const config = {
@@ -30,20 +50,8 @@
         },
         onmeasurement: function (ev) {
           console.log(ev)
-          if (ev.AppInfo !== undefined && ev.Origin === "client") {
-            const ai = ev.AppInfo
-            let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
-            speed /= 1e06  // Mbit/s
-            const elem = document.getElementById(testName)
-            elem.innerHTML = speed.toFixed(2) + " Mb/s"
-          }
-          if (ev.TCPInfo !== undefined && ev.Origin === "server") {
-            if (ev.TCPInfo.MinRTT !== undefined) {
-              const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
-              const elem = document.getElementById("ping")
-              elem.innerHTML = minrtt.toFixed(1) + " ms"
-            }
-          }
+          viewMaybeUpdateSpeed(testName, ev)
+          viewMaybeUpdateMinRTT(ev)
         },
         oncomplete: function() {
           viewOnComplete()
