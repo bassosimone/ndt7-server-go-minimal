@@ -32,16 +32,18 @@
 
   <script type="module">
     /* jshint esversion: 6, asi: true */
-    import {locate, startWorker} from "./ndt7-core.js"
+    import {start} from "./ndt7-core.js"
 
-    function viewOnStart() {
+    function viewOnStarting() {
       document.getElementById("run").disabled = true
       document.getElementById("spinner").style.visibility = "visible"
+      console.log("ndt7: starting")
     }
 
     function viewOnComplete() {
       document.getElementById("run").disabled = false
       document.getElementById("spinner").style.visibility = "hidden"
+      console.log("ndt7: complete")
     }
 
     function viewMaybeUpdateSpeed(testName, ev) {
@@ -89,55 +91,26 @@
       return document.getElementById("accepted").checked === true
     }
 
-    function runTest(url, testName, callback) {
-      const config = {
-        baseURL: url,
-        onstarting: function (ev) {
-          console.log(ev)
+    document.getElementById("run").addEventListener("click", function () {
+      start({
+        baseURL: viewGetBaseURL(),
+        oncomplete: viewOnComplete,
+        onserverurl: viewSetServer,
+        ontestcomplete: function (ev) {
+          console.log("ndt7 test complete", ev)
         },
-        onmeasurement: function (ev) {
-          console.log(ev)
-          viewMaybeUpdateSpeed(testName, ev)
+        ontestmeasurement: function (ev) {
+          viewMaybeUpdateSpeed(ev.Test, ev)
           viewMaybeUpdateMinRTT(ev)
-        },
-        oncomplete: function(ev) {
-          viewOnComplete()
           console.log(ev)
-          if (callback !== undefined) {
-            callback()
-          }
         },
-        testName: testName,
-        userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
-      }
-      viewOnStart()
-      try {
-        startWorker(config)
-      } catch (error) {
-        viewOnComplete()
-        alert(error)
-      }
-    }
-
-    function runBoth() {
-      const config = {
-        callback: function (url) {
-          viewSetServer(url)
-          runTest(url, "download", function () {
-            runTest(url, "upload")
-          })
+        onteststarting: function (ev) {
+          console.log("ndt7 test starting", ev)
         },
-        mockedResult: viewGetBaseURL(),
+        onstarting: viewOnStarting,
         userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
-      }
-      try {
-        locate(config)
-      } catch (error) {
-        alert(error)
-      }
-    }
-
-    document.getElementById("run").addEventListener("click", runBoth)
+      })
+    })
   </script>
 
   <div class="row">

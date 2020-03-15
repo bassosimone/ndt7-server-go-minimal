@@ -133,3 +133,35 @@ export function startWorker(config) {
     baseURL: config.baseURL,
   })
 }
+
+function startTest(config, url, testName, callback) {
+  startWorker({
+    baseURL: url,
+    onstarting: config.onteststarting,
+    onmeasurement: config.ontestmeasurement,
+    oncomplete: function (ev) {
+      if (config.ontestcomplete !== undefined) {
+        config.ontestcomplete(ev)
+      }
+      callback()
+    },
+    testName: testName,
+    userAcceptedDataPolicy: config.userAcceptedDataPolicy,
+  })
+}
+
+export function start(config) {
+  if (config.onstarting !== undefined) {
+    config.onstarting()
+  }
+  locate({
+    callback: function (url) {
+      config.onserverurl(url)
+      startTest(config, url, "download", function () {
+        startTest(config, url, "upload", config.oncomplete)
+      })
+    },
+    mockedResult: config.baseURL,
+    userAcceptedDataPolicy: config.userAcceptedDataPolicy,
+  })
+}
