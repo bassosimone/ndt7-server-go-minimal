@@ -100,15 +100,20 @@ export function startWorker(config) {
       "Test": config.testName,
     })
   }
+  const start = new Date().getTime()
   let done = false
   let worker = new Worker(`ndt7-${config.testName}.js`)
   function finish() {
     if (!done) {
       done = true
+      const stop = new Date().getTime()
       if (config.oncomplete !== undefined) {
         config.oncomplete({
           "Origin": "client",
           "Test": config.testName,
+          "WorkerInfo": {
+            "ElapsedTime": (stop - start) * 1000, // us
+          },
         })
       }
     }
