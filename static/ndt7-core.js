@@ -103,7 +103,7 @@ export function startWorker(config) {
   const start = new Date().getTime()
   let done = false
   let worker = new Worker(`ndt7-${config.testName}.js`)
-  function finish() {
+  function finish(error) {
     if (!done) {
       done = true
       const stop = new Date().getTime()
@@ -113,14 +113,18 @@ export function startWorker(config) {
           "Test": config.testName,
           "WorkerInfo": {
             "ElapsedTime": (stop - start) * 1000, // us
+            "Error": error,
           },
         })
       }
     }
   }
+  worker.onerror = function (ev) {
+    finish(ev.message || "Terminated with exception")
+  }
   worker.onmessage = function (ev) {
     if (ev.data === null) {
-      finish()
+      finish(null)
       return
     }
     if (config.onmeasurement !== undefined) {
@@ -132,7 +136,7 @@ export function startWorker(config) {
   const killAfter = 10000 // ms
   setTimeout(function () {
     worker.terminate()
-    finish()
+    finish("Terminated with timeout")
   }, killAfter)
   worker.postMessage({
     baseURL: config.baseURL,
