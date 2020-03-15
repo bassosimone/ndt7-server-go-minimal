@@ -58,9 +58,17 @@
       return ""
     }
 
-    function runTest(testName, callback) {
+    function viewSetServer(url) {
+      document.getElementById("server").innerHTML = url
+    }
+
+    function viewUserAcceptedDataPolicy() {
+      return document.getElementById("accepted").checked === true
+    }
+
+    function runTest(url, testName, callback) {
       const config = {
-        baseURL: viewGetBaseURL(),
+        baseURL: url,
         onstarting: function () {
           console.log(testName + ": starting")
         },
@@ -76,11 +84,8 @@
             callback()
           }
         },
-        onlocate: function (ev) {
-          document.getElementById("server").innerHTML = ev.fqdn
-        },
         testName: testName,
-        userAcceptedDataPolicy: document.getElementById("accepted").checked === true,
+        userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
       }
       viewOnStart()
       try {
@@ -90,10 +95,23 @@
         alert(error)
       }
     }
+
     function runBoth() {
-      runTest("download", function () {
-        runTest("upload")
-      })
+      const config = {
+        callback: function (url) {
+          viewSetServer(url)
+          runTest(url, "download", function () {
+            runTest(url, "upload")
+          })
+        },
+        mockedResult: viewGetBaseURL(),
+        userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
+      }
+      try {
+        ndt7.locate(config)
+      } catch (error) {
+        alert(error)
+      }
     }
   </script>
 
