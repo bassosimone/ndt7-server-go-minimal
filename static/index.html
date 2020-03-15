@@ -11,6 +11,16 @@
 
   <script>
     /* jshint esversion: 6, asi: true */
+    function viewOnStart() {
+      document.getElementById("run").disabled = true
+      document.getElementById("spinner").style.visibility = "visible"
+    }
+
+    function viewOnComplete() {
+      document.getElementById("run").disabled = false
+      document.getElementById("spinner").style.visibility = "hidden"
+    }
+
     function runTest(testName, callback) {
       const url = window.location
       const config = {
@@ -36,7 +46,7 @@
           }
         },
         oncomplete: function() {
-          document.getElementById("run").disabled = false
+          viewOnComplete()
           console.log(testName + ": complete")
           if (callback !== undefined) {
             callback()
@@ -48,11 +58,11 @@
         testName: testName,
         userAcceptedDataPolicy: document.getElementById("accepted").checked === true,
       }
-      document.getElementById("run").disabled = true
+      viewOnStart()
       try {
         ndt7.start(config)
       } catch (error) {
-        document.getElementById("run").disabled = false
+        viewOnComplete()
         alert(error)
       }
     }
@@ -77,6 +87,10 @@
     </label>
     <button type="button" class="btn btn-primary btn-sm" id="run"
       onclick="runBoth()">Run</button>
+    <div class="spinner-grow spinner-grow-sm" role="status" id="spinner"
+         style="visibility: hidden">
+      <span class="sr-only">Running...</span>
+    </div>
     </form>
     <p>For more on M-Lab's data collection and measurement, including the
       disclosure of IP addresses, see our
