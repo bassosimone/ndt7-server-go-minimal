@@ -8,7 +8,7 @@ onmessage = function (ev) {
   url.pathname = "/ndt/v7/upload"
   const sock = new WebSocket(url.toString(), wsproto)
   sock.onclose = function () {
-    postMessage()
+    postMessage(null)
   }
   function uploader(socket, data, start, previous, total) {
     let now = new Date().getTime()

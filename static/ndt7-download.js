@@ -7,7 +7,7 @@ onmessage = function (ev) {
   url.pathname = "/ndt/v7/download"
   const sock = new WebSocket(url.toString(), "net.measurementlab.ndt.v7")
   sock.onclose = function () {
-    postMessage()
+    postMessage(null)
   }
   sock.onopen = function () {
     const start = new Date().getTime()

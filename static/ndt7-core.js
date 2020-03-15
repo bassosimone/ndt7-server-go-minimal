@@ -95,7 +95,7 @@ const ndt7 = (function() {
         }
       }
       worker.onmessage = function (ev) {
-        if (ev.data === undefined) {
+        if (ev.data === null) {
           finish()
           return
         }
