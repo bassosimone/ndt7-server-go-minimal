@@ -110,6 +110,7 @@
         baseURL: viewGetBaseURL(),
         oncomplete: viewOnComplete,
         onserverurl: viewSetServer,
+        onstarting: viewOnStarting,
         ontestcomplete: function (ev) {
           console.log("ndt7 test complete", ev)
         },
@@ -121,7 +122,6 @@
         onteststarting: function (ev) {
           console.log("ndt7 test starting", ev)
         },
-        onstarting: viewOnStarting,
         userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
       }
       try {

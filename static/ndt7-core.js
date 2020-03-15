@@ -48,9 +48,9 @@ export function locate(config) {
 //
 //     {
 //       baseURL: "",
-//       oncomplete: function() {},
-//       onmeasurement: function (measurement) {},
-//       onstarting: function() {},
+//       ontestcomplete: function() {},
+//       ontestmeasurement: function (measurement) {},
+//       onteststarting: function() {},
 //       testName: "",
 //       userAcceptedDataPolicy: true
 //     }
@@ -60,13 +60,13 @@ export function locate(config) {
 // - `baseURL` (`string`) is the mandatory http/https URL of the server (use
 //   the `locate` function to get the URL of the server);
 //
-// - `oncomplete` (`function(testSpec)`) is the optional callback called
+// - `ontestcomplete` (`function(testSpec)`) is the optional callback called
 //   when done (see below for the testSpec structure);
 //
-// - `onmeasurement` (`function(measurement)`) is the optional callback
+// - `ontestmeasurement` (`function(measurement)`) is the optional callback
 //   called when a new measurement object is emitted (see below);
 //
-// - `onstarting` is like `oncomplete` but called at startup;
+// - `onteststarting` is like `ontestcomplete` but called at startup;
 //
 // - `testName` (`string`) must be one of "download", "upload";
 //
@@ -94,8 +94,8 @@ export function startWorker(config) {
   if (config.baseURL === undefined || config.baseURL === "") {
     throw "fatal: baseURL not provided"
   }
-  if (config.onstarting !== undefined) {
-    config.onstarting({
+  if (config.onteststarting !== undefined) {
+    config.onteststarting({
       "Origin": "client",
       "Test": config.testName,
     })
@@ -107,8 +107,8 @@ export function startWorker(config) {
     if (!done) {
       done = true
       const stop = new Date().getTime()
-      if (config.oncomplete !== undefined) {
-        config.oncomplete({
+      if (config.ontestcomplete !== undefined) {
+        config.ontestcomplete({
           "Origin": "client",
           "Test": config.testName,
           "WorkerInfo": {
@@ -127,8 +127,8 @@ export function startWorker(config) {
       finish(null)
       return
     }
-    if (config.onmeasurement !== undefined) {
-      config.onmeasurement(ev.data)
+    if (config.ontestmeasurement !== undefined) {
+      config.ontestmeasurement(ev.data)
     }
   }
   // Kill the worker after the timeout. This forces the browser to
@@ -146,9 +146,9 @@ export function startWorker(config) {
 function startTest(config, url, testName, callback) {
   startWorker({
     baseURL: url,
-    onstarting: config.onteststarting,
-    onmeasurement: config.ontestmeasurement,
-    oncomplete: function (ev) {
+    onteststarting: config.onteststarting,
+    ontestmeasurement: config.ontestmeasurement,
+    ontestcomplete: function (ev) {
       if (config.ontestcomplete !== undefined) {
         config.ontestcomplete(ev)
       }
@@ -159,6 +159,42 @@ function startTest(config, url, testName, callback) {
   })
 }
 
+// start starts the ndt7 test suite. The config object structure is:
+//
+//     {
+//       baseURL: "",
+//       oncomplete: function() {},
+//       onstarting: function() {},
+//       ontestcomplete: function (testSpec) {},
+//       ontestmeasurement: function (measurement) {},
+//       onteststarting: function (testSpec) {},
+//       userAcceptedDataPolicy: true
+//     }
+//
+// where
+//
+// - `baseURL` (`string`) is the optional http/https URL of the server (we
+//   will locate a suitable server if this is missing);
+//
+// - `oncomplete` (`function(testSpec)`) is the optional callback called
+//   when the whole test suite has finished;
+//
+// - `onstarting` is like `oncomplete` but called at startup;
+//
+// - `onserverurl` (`function(string)`) is called when we have located
+//   the server URL, or immediately if you provided a baseURL;
+//
+// - `ontestcomplete` is exactly like the `ontestcomplete` field passed
+//   to the `startWorker` function (see above);
+//
+// - `ontestmeasurement` is exactly like the `ontestmeasurement` field passed
+//   to the `startWorker` function (see above);
+//
+// - `onteststarting` is exactly like the `onteststarting` field passed
+//   to the `startWorker` function (see above);
+//
+// - `userAcceptedDataPolicy` MUST be present and set to true otherwise
+//   this function will immediately throw an exception.
 export function start(config) {
   if (config.onstarting !== undefined) {
     config.onstarting()
