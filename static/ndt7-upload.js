@@ -7,10 +7,15 @@ onmessage = function (ev) {
   const wsproto = "net.measurementlab.ndt.v7"
   url.pathname = "/ndt/v7/upload"
   const sock = new WebSocket(url.toString(), wsproto)
+  let closed = false
   sock.onclose = function () {
+    closed = true
     postMessage(null)
   }
   function uploader(socket, data, start, previous, total) {
+    if (closed) {
+      return // socket.send() with too much buffering causes socket.close()
+    }
     let now = new Date().getTime()
     const duration = 10000  // millisecond
     if (now - start > duration) {
