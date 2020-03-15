@@ -1,165 +1,220 @@
 <!doctype html>
 <html lang="en">
+
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
   <meta charset="utf-8">
-  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
+  <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+    integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
   <title>ndt7 Speed Test</title>
 
-</head><body><div class="container">
+</head>
 
-  <div class="row">
-    <h1>Test Your Speed</h1>
-    <p>M-Lab's Speed Test provides advanced diagnostics of the performance
-      of your broadband connection through quick measurements.</p>
-    <form>
-    <label>
-      <input type="checkbox" id="accepted">
-      I agree to the <a href="https://www.measurementlab.net/privacy/">data
-      policy</a>, which includes retention and publication of IP addresses.
-    </label>
-    <button type="button" class="btn btn-primary btn-sm" id="run">Run</button>
-    <div class="spinner-grow spinner-grow-sm" role="status" id="spinner"
-         style="visibility: hidden">
-      <span class="sr-only">Running...</span>
+<body>
+  <div class="container">
+
+    <div class="row">
+      <h1>Test Your Speed</h1>
+      <p>M-Lab's Speed Test provides advanced diagnostics of the performance
+        of your broadband connection through quick measurements.</p>
+      <form>
+        <label>
+          <input type="checkbox" id="accepted">
+          I agree to the <a href="https://www.measurementlab.net/privacy/">data
+            policy</a>, which includes retention and publication of IP addresses.
+        </label>
+        <button type="button" class="btn btn-primary btn-sm" id="run">Run</button>
+        <div class="spinner-grow spinner-grow-sm" role="status" id="spinner" style="visibility: hidden">
+          <span class="sr-only">Running...</span>
+        </div>
+      </form>
+      <p>For more on M-Lab's data collection and measurement, including the
+        disclosure of IP addresses, see our
+        <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
     </div>
-    </form>
-    <p>For more on M-Lab's data collection and measurement, including the
-      disclosure of IP addresses, see our
-      <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
-  </div>
 
-  <div class="row">
-    <h2>Results</h2>
-    <div class="table-responsive"><table class="table table-bordered table-hover"><tbody>
-      <tr><th scope="row" class="w-25">server:</th><td id="server" class="text-monospace">[server]</td></tr>
-      <tr><th scope="row" class="w-25">download:</th><td id="download" class="text-monospace">[download]</td></tr>
-      <tr><th scope="row" class="w-25">upload:</th><td id="upload" class="text-monospace">[upload]</td></tr>
-      <tr><th scope="row" class="w-25">ping:</th><td id="ping" class="text-monospace">[ping]</td></tr>
-    </tbody></table></div>
-  </div>
+    <div class="row">
+      <h2>Results</h2>
+      <div class="table-responsive">
+        <table class="table table-bordered table-hover">
+          <tbody>
+            <tr>
+              <th scope="row" class="w-25">server:</th>
+              <td id="server" class="text-monospace">[server]</td>
+            </tr>
+            <tr>
+              <th scope="row" class="w-25">download:</th>
+              <td id="download" class="text-monospace">[download]</td>
+            </tr>
+            <tr>
+              <th scope="row" class="w-25">upload:</th>
+              <td id="upload" class="text-monospace">[upload]</td>
+            </tr>
+            <tr>
+              <th scope="row" class="w-25">ping:</th>
+              <td id="ping" class="text-monospace">[ping]</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <button type="button" class="btn btn-primary btn-sm" id="export">
+        Export as JSON</button>
+    </div>
 
-  <script>
-    /* jshint esversion: 6, asi: true */
-    "use strict"
+    <script>
+      /* jshint esversion: 6, asi: true */
+      "use strict"
+      let currentMeasurement = {}
+      let measurementID = 0
 
-    function viewOnStarting() {
-      document.getElementById("run").disabled = true
-      document.getElementById("spinner").style.visibility = "visible"
-      document.getElementById("server").innerHTML = "[server]"
-      document.getElementById("download").innerHTML = "[download]"
-      document.getElementById("upload").innerHTML = "[upload]"
-      document.getElementById("ping").innerHTML = "[ping]"
-      console.log("ndt7: starting")
-    }
-
-    function viewOnComplete() {
-      document.getElementById("run").disabled = false
-      document.getElementById("spinner").style.visibility = "hidden"
-      console.log("ndt7: complete")
-    }
-
-    function formatSpeedWithUnit(speed) {
-      if (speed < 1e03) {
-        return `${speed.toFixed(2)} bit/s`
+      function viewOnStarting() {
+        document.getElementById("run").disabled = true
+        document.getElementById("export").disabled = true
+        document.getElementById("spinner").style.visibility = "visible"
+        document.getElementById("server").innerHTML = "[server]"
+        document.getElementById("download").innerHTML = "[download]"
+        document.getElementById("upload").innerHTML = "[upload]"
+        document.getElementById("ping").innerHTML = "[ping]"
+        console.log("ndt7: starting")
       }
-      speed /= 1e03
-      if (speed < 1e03) {
-        return `${speed.toFixed(2)} kbit/s`
-      }
-      speed /= 1e03
-      if (speed < 1e03) {
-        return `${speed.toFixed(2)} Mbit/s`
-      }
-      speed /= 1e03
-      return `${speed.toFixed(2)} Gbit/s`
-    }
 
-    function viewMaybeUpdateSpeed(testName, ev) {
-      if (ev.AppInfo !== undefined && ev.Origin === "client") {
-        const ai = ev.AppInfo
-        let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
-        const elem = document.getElementById(testName)
-        elem.innerHTML = formatSpeedWithUnit(speed)
+      function viewOnComplete() {
+        document.getElementById("run").disabled = false
+        document.getElementById("export").disabled = false
+        document.getElementById("spinner").style.visibility = "hidden"
+        console.log("ndt7: complete")
       }
-    }
 
-    function viewMaybeUpdateMinRTT(ev) {
-      if (ev.TCPInfo !== undefined && ev.Origin === "server") {
-        if (ev.TCPInfo.MinRTT !== undefined) {
-          const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
-          const elem = document.getElementById("ping")
-          elem.innerHTML = minrtt.toFixed(1) + " ms"
+      function formatSpeedWithUnit(speed) {
+        if (speed < 1e03) {
+          return `${speed.toFixed(2)} bit/s`
+        }
+        speed /= 1e03
+        if (speed < 1e03) {
+          return `${speed.toFixed(2)} kbit/s`
+        }
+        speed /= 1e03
+        if (speed < 1e03) {
+          return `${speed.toFixed(2)} Mbit/s`
+        }
+        speed /= 1e03
+        return `${speed.toFixed(2)} Gbit/s`
+      }
+
+      function viewMaybeUpdateSpeed(testName, ev) {
+        if (ev.AppInfo !== undefined && ev.Origin === "client") {
+          const ai = ev.AppInfo
+          let speed = (8 * ai.NumBytes) / (ai.ElapsedTime / 1e06)  // bit/s
+          const elem = document.getElementById(testName)
+          elem.innerHTML = formatSpeedWithUnit(speed)
         }
       }
-    }
 
-    function viewGetBaseURL() {
-      const url = window.location
-      // This code allows the user to specify a server using the fragment
-      const podspec = /^#mlab[1-9]{1}-[a-z]{3}[0-9]{2}$/
-      if (url.hash.match(podspec)) {
-        let pod = url.hash.substring(1)
-        return `https://ndt-iupui-${pod}.measurement-lab.org/`
+      function viewMaybeUpdateMinRTT(ev) {
+        if (ev.TCPInfo !== undefined && ev.Origin === "server") {
+          if (ev.TCPInfo.MinRTT !== undefined) {
+            const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
+            const elem = document.getElementById("ping")
+            elem.innerHTML = minrtt.toFixed(1) + " ms"
+          }
+        }
       }
-      // As a special case, when running from local host we assume we can run ndt7
-      // with it, as happens for bassosimone/ndt7-server-go-minimal
-      if (url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
-        return url.origin + url.pathname
+
+      function viewGetBaseURL() {
+        const url = window.location
+        // This code allows the user to specify a server using the fragment
+        const podspec = /^#mlab[1-9]{1}-[a-z]{3}[0-9]{2}$/
+        if (url.hash.match(podspec)) {
+          let pod = url.hash.substring(1)
+          return `https://ndt-iupui-${pod}.measurement-lab.org/`
+        }
+        // As a special case, when running from local host we assume we can run ndt7
+        // with it, as happens for bassosimone/ndt7-server-go-minimal
+        if (url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
+          return url.origin + url.pathname
+        }
+        // Otherwise, we use locate.measurementlab.net
+        return ""
       }
-      // Otherwise, we use locate.measurementlab.net
-      return ""
-    }
 
-    function viewSetServer(url) {
-      document.getElementById("server").innerHTML = url
-    }
-
-    function viewUserAcceptedDataPolicy() {
-      return document.getElementById("accepted").checked === true
-    }
-
-    document.getElementById("run").addEventListener("click", function () {
-      const config = {
-        baseURL: viewGetBaseURL(),
-        oncomplete: viewOnComplete,
-        onserverurl: viewSetServer,
-        onstarting: viewOnStarting,
-        ontestcomplete: function (ev) {
-          console.log("ndt7 test complete", ev)
-        },
-        ontestmeasurement: function (ev) {
-          viewMaybeUpdateSpeed(ev.Test, ev)
-          viewMaybeUpdateMinRTT(ev)
-          console.log(ev)
-        },
-        onteststarting: function (ev) {
-          console.log("ndt7 test starting", ev)
-        },
-        userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
+      function viewSetServer(url) {
+        document.getElementById("server").innerHTML = url
       }
-      try {
-        ndt7.start(config)
-      } catch (error) {
-        alert(error)
-        viewOnComplete()
-      }
-    })
-  </script>
 
-  <div class="row">
-    <h2>About</h2>
-    <p><a href="https://www.measurementlab.net/">Measurement Lab</a> (M-Lab)
-      provides the largest collection of open Internet performance data on
-      the planet. As a consortium of research, industry, and public-interest
-      partners, M-Lab is dedicated to providing an ecosystem for the open,
-      verifiable measurement of global network performance.</p>
+      function viewUserAcceptedDataPolicy() {
+        return document.getElementById("accepted").checked === true
+      }
+
+      document.getElementById("run").addEventListener("click", function () {
+        let measurement = ndt7.newMeasurement()
+        const config = {
+          baseURL: viewGetBaseURL(),
+          oncomplete: function () {
+            viewOnComplete()
+            currentMeasurement = measurement.get()
+            measurementID = new Date().getTime()
+          },
+          onserverurl: viewSetServer,
+          onstarting: viewOnStarting,
+          ontestcomplete: function (ev) {
+            console.log("ndt7 test complete", ev)
+          },
+          ontestmeasurement: function (ev) {
+            viewMaybeUpdateSpeed(ev.Test, ev)
+            viewMaybeUpdateMinRTT(ev)
+            console.log(ev)
+            measurement.update(ev)
+          },
+          onteststarting: function (ev) {
+            console.log("ndt7 test starting", ev)
+          },
+          userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
+        }
+        try {
+          ndt7.start(config)
+        } catch (error) {
+          alert(error)
+          viewOnComplete()
+        }
+      })
+
+      document.getElementById("export").addEventListener("click", function () {
+        if (measurementID === 0) {
+          alert("fatal: no measurement to download")
+          return
+        }
+        const a = document.createElement("a");
+        const file = new Blob([JSON.stringify(currentMeasurement)], {
+          type: "application/json",
+        })
+        a.href = URL.createObjectURL(file)
+        a.download = measurementID + ".json"
+        a.click()
+      })
+    </script>
+
+    <div class="row">
+      <h2>About</h2>
+      <p><a href="https://www.measurementlab.net/">Measurement Lab</a> (M-Lab)
+        provides the largest collection of open Internet performance data on
+        the planet. As a consortium of research, industry, and public-interest
+        partners, M-Lab is dedicated to providing an ecosystem for the open,
+        verifiable measurement of global network performance.</p>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"
+      integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo"
+      crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"
+      integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1"
+      crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"
+      integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
+      crossorigin="anonymous"></script>
+    <script src="./ndt7-core.js"></script>
+
   </div>
+</body>
 
-  <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
-  <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-  <script src="./ndt7-core.js"></script>
-
-</div></body></html>
+</html>

@@ -213,8 +213,67 @@ const ndt7 = (function () {
     })
   }
 
+  // newMeasurement returns an object that saves the result using
+  // (a subset of) the OONI data format for ndt7.
+  function newMeasurement() {
+    let tk = {
+      download: [],
+      failure: null,
+      summary: {
+        avg_rtt: null,
+        download: null,
+        mss: null,
+        max_rtt: null,
+        min_rtt: null,
+        ping: null,
+        retransmit_rate: null,
+        upload: null,
+      },
+      upload: []
+    }
+    function computeSpeed(ai) {
+      const millisec = ai.ElapsedTime / 1e03
+      const bits = ai.NumBytes * 8
+      return bits / millisec /* kbit/s */
+    }
+    return {
+      update: function (ev) {
+        if (ev.Test === "download") {
+          tk.download.push(ev)
+          if (ev.TCPInfo !== undefined && ev.TCPInfo !== null) {
+            const rtt = ev.TCPInfo.RTT / 1e03 /* us => ms */
+            tk.summary.avg_rtt = rtt
+            tk.summary.mss = ev.TCPInfo.AdvMSS
+            if (tk.summary.max_rtt === null || tk.summary.max_rtt < rtt) {
+              tk.summary.max_rtt = rtt
+            }
+            tk.summary.min_rtt = ev.TCPInfo.MinRTT / 1e03 /* us => ms */
+            tk.summary.ping = tk.summary.min_rtt
+            if (ev.TCPInfo.BytesSent > 0) {
+              tk.summary.retransmit_rate = ev.TCPInfo.BytesRetrans / ev.TCPInfo.BytesSent
+            }
+          }
+          if (ev.AppInfo !== undefined && ev.AppInfo !== null) {
+            tk.summary.download = computeSpeed(ev.AppInfo)
+          }
+        } else if (ev.Test === "upload") {
+          tk.upload.push(ev)
+          if (ev.AppInfo !== undefined && ev.AppInfo !== null) {
+            tk.summary.upload = computeSpeed(ev.AppInfo)
+          }
+        } else {
+          throw "update: unexpected ev.Test value"
+        }
+      },
+      get: function () {
+        return {test_keys: Object.assign({}, tk)}
+      },
+    }
+  }
+
   return {
     locate: locate,
+    newMeasurement: newMeasurement,
     startWorker: startWorker,
     start: start,
   }
