@@ -2,7 +2,7 @@
 // WebWorker that runs the ndt7 upload test
 onmessage = function (ev) {
   "use strict"
-  let url = new URL(ev.data.href)
+  let url = new URL(ev.data.baseURL)
   url.protocol = (url.protocol === "https:") ? "wss:" : "ws:"
   const wsproto = "net.measurementlab.ndt.v7"
   url.pathname = "/ndt/v7/upload"

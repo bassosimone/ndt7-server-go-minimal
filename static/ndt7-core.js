@@ -31,7 +31,7 @@ const ndt7 = (function() {
       finish()
     }, 10000)
     worker.postMessage({
-      href: config.baseURL,
+      baseURL: config.baseURL,
     })
   }
 
