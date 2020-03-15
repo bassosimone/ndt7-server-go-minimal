@@ -32,7 +32,7 @@
 
   <script type="module">
     /* jshint esversion: 6, asi: true */
-    import {locate, start} from "./ndt7-core.js"
+    import {locate, startWorker} from "./ndt7-core.js"
 
     function viewOnStart() {
       document.getElementById("run").disabled = true
@@ -112,7 +112,7 @@
       }
       viewOnStart()
       try {
-        start(config)
+        startWorker(config)
       } catch (error) {
         viewOnComplete()
         alert(error)

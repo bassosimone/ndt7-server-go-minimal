@@ -74,7 +74,7 @@ export function locate(config) {
 //
 // The measurement object is described by the ndt7 specification. See
 // https://github.com/m-lab/ndt-server/blob/master/spec/ndt7-protocol.md.
-export function start(config) {
+export function startWorker(config) {
   if (config === undefined || config.userAcceptedDataPolicy !== true) {
     throw "fatal: user must accept data policy first"
   }
@@ -107,7 +107,7 @@ export function start(config) {
     }
   }
   // Kill the worker after the timeout. This forces the browser to
-  // close the WebSockets and prevent too-long tests.
+  // close the WebSockets and prevents too-long tests.
   const killAfter = 10000 // ms
   setTimeout(function () {
     worker.terminate()
