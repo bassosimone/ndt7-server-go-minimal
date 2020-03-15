@@ -106,7 +106,7 @@
     }
 
     document.getElementById("run").addEventListener("click", function () {
-      start({
+      const config = {
         baseURL: viewGetBaseURL(),
         oncomplete: viewOnComplete,
         onserverurl: viewSetServer,
@@ -123,7 +123,13 @@
         },
         onstarting: viewOnStarting,
         userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
-      })
+      }
+      try {
+        start(config)
+      } catch (error) {
+        alert(error)
+        viewOnComplete()
+      }
     })
   </script>
 
