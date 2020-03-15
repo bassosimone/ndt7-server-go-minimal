@@ -30,6 +30,16 @@
       <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
   </div>
 
+  <div class="row">
+    <h2>Results</h2>
+    <table class="table table-bordered table-hover"><tbody>
+      <tr><td>server:</td><td id="server">[server]</td></tr>
+      <tr><td>download:</td><td id="download">[download]</td></tr>
+      <tr><td>upload:</td><td id="upload">[upload]</td></tr>
+      <tr><td>ping:</td><td id="ping">[ping]</td></tr>
+    </tbody></table>
+  </div>
+
   <script type="module">
     /* jshint esversion: 6, asi: true */
     import {start} from "./ndt7-core.js"
@@ -37,6 +47,10 @@
     function viewOnStarting() {
       document.getElementById("run").disabled = true
       document.getElementById("spinner").style.visibility = "visible"
+      document.getElementById("server").innerHTML = "[server]"
+      document.getElementById("download").innerHTML = "[download]"
+      document.getElementById("upload").innerHTML = "[upload]"
+      document.getElementById("ping").innerHTML = "[ping]"
       console.log("ndt7: starting")
     }
 
@@ -112,16 +126,6 @@
       })
     })
   </script>
-
-  <div class="row">
-    <h2>Results</h2>
-    <table class="table table-bordered table-hover"><tbody>
-      <tr><td>server:</td><td id="server">[N/A]</td></tr>
-      <tr><td>download:</td><td id="download">[download]</td></tr>
-      <tr><td>upload:</td><td id="upload">[upload]</td></tr>
-      <tr><td>ping:</td><td id="ping">[ping]</td></tr>
-    </tbody></table>
-  </div>
 
   <div class="row">
     <h2>About</h2>
