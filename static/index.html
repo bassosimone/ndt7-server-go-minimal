@@ -147,12 +147,12 @@
       }
 
       document.getElementById("run").addEventListener("click", function () {
-        let measurement = ndt7.newMeasurement()
+        let measurement = ndt7ooni.newMeasurement()
         const config = {
           baseURL: viewGetBaseURL(),
           oncomplete: function () {
             viewOnComplete()
-            currentMeasurement = measurement.get()
+            currentMeasurement = measurement.end()
             measurementID = new Date().getTime()
           },
           onserverurl: viewSetServer,
@@ -172,7 +172,7 @@
           userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
         }
         try {
-          ndt7.start(config)
+          ndt7core.start(config)
         } catch (error) {
           alert(error)
           viewOnComplete()
@@ -213,6 +213,7 @@
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
       crossorigin="anonymous"></script>
     <script src="./ndt7-core.js"></script>
+    <script src="./ndt7-ooni.js"></script>
 
   </div>
 </body>
