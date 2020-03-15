@@ -7,10 +7,33 @@
 
   <title>ndt7 Speed Test</title>
 
-</head><body>
+</head><body><div class="container">
 
-  <script>
+  <div class="row">
+    <h1>Test Your Speed</h1>
+    <p>M-Lab's Speed Test provides advanced diagnostics of the performance
+      of your broadband connection through quick measurements.</p>
+    <form>
+    <label>
+      <input type="checkbox" id="accepted">
+      I agree to the <a href="https://www.measurementlab.net/privacy/">data
+      policy</a>, which includes retention and publication of IP addresses.
+    </label>
+    <button type="button" class="btn btn-primary btn-sm" id="run">Run</button>
+    <div class="spinner-grow spinner-grow-sm" role="status" id="spinner"
+         style="visibility: hidden">
+      <span class="sr-only">Running...</span>
+    </div>
+    </form>
+    <p>For more on M-Lab's data collection and measurement, including the
+      disclosure of IP addresses, see our
+      <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
+  </div>
+
+  <script type="module">
     /* jshint esversion: 6, asi: true */
+    import {locate, start} from "./ndt7-core.js"
+
     function viewOnStart() {
       document.getElementById("run").disabled = true
       document.getElementById("spinner").style.visibility = "visible"
@@ -89,7 +112,7 @@
       }
       viewOnStart()
       try {
-        ndt7.start(config)
+        start(config)
       } catch (error) {
         viewOnComplete()
         alert(error)
@@ -108,36 +131,14 @@
         userAcceptedDataPolicy: viewUserAcceptedDataPolicy(),
       }
       try {
-        ndt7.locate(config)
+        locate(config)
       } catch (error) {
         alert(error)
       }
     }
+
+    document.getElementById("run").addEventListener("click", runBoth)
   </script>
-
-<div class="container">
-
-  <div class="row">
-    <h1>Test Your Speed</h1>
-    <p>M-Lab's Speed Test provides advanced diagnostics of the performance
-      of your broadband connection through quick measurements.</p>
-    <form>
-    <label>
-      <input type="checkbox" id="accepted">
-      I agree to the <a href="https://www.measurementlab.net/privacy/">data
-      policy</a>, which includes retention and publication of IP addresses.
-    </label>
-    <button type="button" class="btn btn-primary btn-sm" id="run"
-      onclick="runBoth()">Run</button>
-    <div class="spinner-grow spinner-grow-sm" role="status" id="spinner"
-         style="visibility: hidden">
-      <span class="sr-only">Running...</span>
-    </div>
-    </form>
-    <p>For more on M-Lab's data collection and measurement, including the
-      disclosure of IP addresses, see our
-      <a href="https://www.measurementlab.net/privacy/">Privacy Policy</a>.</p>
-  </div>
 
   <div class="row">
     <h2>Results</h2>
@@ -158,10 +159,9 @@
       verifiable measurement of global network performance.</p>
   </div>
 
-</div>
   <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
   <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-  <script src="ndt7-core.js"></script>
+  <script src="ndt7-core.js" type="module"></script>
 
-</body></html>
+</div></body></html>
