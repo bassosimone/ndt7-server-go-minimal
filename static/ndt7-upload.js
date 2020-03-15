@@ -22,11 +22,8 @@ onmessage = function (ev) {
       sock.close()
       return
     }
-    // We have seen better performance with Chrome using 1<<24 but we
-    // have also seen that in such case Edge prematurely closes the
-    // connection. For this reason, we are now using 1<<20 as max size.
-    const maxScaledMessageSize = 1048576 /* = (1<<20) = 1MB */
-    if (data.length < maxScaledMessageSize && data.length < (total - sock.bufferedAmount)/16) {
+    const maxMessageSize = 16777216 /* = (1<<24) = 16MB */
+    if (data.length < maxMessageSize && data.length < (total - sock.bufferedAmount)/16) {
       data = new Uint8Array(data.length * 2) // TODO(bassosimone): fill this message
     }
     const underbuffered = 7 * data.length
