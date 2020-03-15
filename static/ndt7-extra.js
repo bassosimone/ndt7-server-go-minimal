@@ -1,5 +1,5 @@
 /* jshint esversion: 6, asi: true */
-const ndt7ooni = (function () {
+const ndt7extra = (function () {
   "use strict"
 
   function formatDate(date) {

@@ -147,7 +147,7 @@
       }
 
       document.getElementById("run").addEventListener("click", function () {
-        let measurement = ndt7ooni.newMeasurement()
+        let measurement = ndt7extra.newMeasurement()
         const config = {
           baseURL: viewGetBaseURL(),
           oncomplete: function () {
@@ -213,7 +213,7 @@
       integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM"
       crossorigin="anonymous"></script>
     <script src="./ndt7-core.js"></script>
-    <script src="./ndt7-ooni.js"></script>
+    <script src="./ndt7-extra.js"></script>
 
   </div>
 </body>
