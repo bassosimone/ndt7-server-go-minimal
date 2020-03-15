@@ -60,7 +60,8 @@ export function locate(config) {
 // - `baseURL` (`string`) is the mandatory http/https URL of the server (use
 //   the `locate` function to get the URL of the server);
 //
-// - `oncomplete` (`function()`) is the optional callback called when done;
+// - `oncomplete` (`function(testSpec)`) is the optional callback called
+//   when done (see below for the testSpec structure);
 //
 // - `onmeasurement` (`function(measurement)`) is the optional callback
 //   called when a new measurement object is emitted (see below);
@@ -74,6 +75,15 @@ export function locate(config) {
 //
 // The measurement object is described by the ndt7 specification. See
 // https://github.com/m-lab/ndt-server/blob/master/spec/ndt7-protocol.md.
+//
+// The testSpec structure is like:
+//
+//     {
+//       "Origin": "client",
+//       "Test": ""
+//     }
+//
+// where Origin is always "client" and Test is "download" or "upload".
 export function startWorker(config) {
   if (config === undefined || config.userAcceptedDataPolicy !== true) {
     throw "fatal: user must accept data policy first"
@@ -85,7 +95,10 @@ export function startWorker(config) {
     throw "fatal: baseURL not provided"
   }
   if (config.onstarting !== undefined) {
-    config.onstarting()
+    config.onstarting({
+      "Origin": "client",
+      "Test": config.testName,
+    })
   }
   let done = false
   let worker = new Worker(`ndt7-${config.testName}.js`)
@@ -93,7 +106,10 @@ export function startWorker(config) {
     if (!done) {
       done = true
       if (config.oncomplete !== undefined) {
-        config.oncomplete()
+        config.oncomplete({
+          "Origin": "client",
+          "Test": config.testName,
+        })
       }
     }
   }

@@ -92,17 +92,17 @@
     function runTest(url, testName, callback) {
       const config = {
         baseURL: url,
-        onstarting: function () {
-          console.log(testName + ": starting")
+        onstarting: function (ev) {
+          console.log(ev)
         },
         onmeasurement: function (ev) {
           console.log(ev)
           viewMaybeUpdateSpeed(testName, ev)
           viewMaybeUpdateMinRTT(ev)
         },
-        oncomplete: function() {
+        oncomplete: function(ev) {
           viewOnComplete()
-          console.log(testName + ": complete")
+          console.log(ev)
           if (callback !== undefined) {
             callback()
           }
