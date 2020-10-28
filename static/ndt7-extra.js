@@ -88,6 +88,8 @@ const ndt7extra = (function () {
           if (ev.AppInfo !== undefined && ev.AppInfo !== null) {
             tk.summary.upload = computeSpeed(ev.AppInfo)
           }
+        } else if (ev.Test === "roundtrip") {
+          // TODO(bassosimone): handle this case
         } else {
           throw "update: unexpected ev.Test value"
         }

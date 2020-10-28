@@ -50,6 +50,7 @@ const ndt7core = (function () {
   //
   //     {
   //       baseURL: "",
+  //       killAfter: 1234,
   //       ontestcomplete: function() {},
   //       ontestmeasurement: function (measurement) {},
   //       onteststarting: function() {},
@@ -61,6 +62,9 @@ const ndt7core = (function () {
   //
   // - `baseURL` (`string`) is the mandatory http/https URL of the server (use
   //   the `locate` function to get the URL of the server);
+  //
+  // - `killAfter` (`number`) is the number of milliseconds after which
+  //   we should kill the running subtest;
   //
   // - `ontestcomplete` (`function(testSpec)`) is the optional callback called
   //   when done (see below for the testSpec structure);
@@ -90,8 +94,9 @@ const ndt7core = (function () {
     if (config === undefined || config.userAcceptedDataPolicy !== true) {
       throw "fatal: user must accept data policy first"
     }
-    if (config.testName !== "download" && config.testName !== "upload") {
-      throw "fatal: testName is neither download nor upload"
+    if (config.testName !== "roundtrip" &&
+        config.testName !== "download" && config.testName !== "upload") {
+      throw "fatal: testName is not one of: roundtrip, download, upload"
     }
     if (config.baseURL === undefined || config.baseURL === "") {
       throw "fatal: baseURL not provided"
@@ -135,7 +140,7 @@ const ndt7core = (function () {
     }
     // Kill the worker after the timeout. This forces the browser to
     // close the WebSockets and prevents too-long tests.
-    const killAfter = 10000 // ms
+    const killAfter = config.killAfter
     setTimeout(function () {
       worker.terminate()
       finish("Terminated with timeout")
@@ -148,6 +153,7 @@ const ndt7core = (function () {
   function startTest(config, url, testName, callback) {
     startWorker({
       baseURL: url,
+      killAfter: (testName === "roundtrip") ? 3000 : 10000,
       onteststarting: config.onteststarting,
       ontestmeasurement: config.ontestmeasurement,
       ontestcomplete: function (ev) {
@@ -204,8 +210,10 @@ const ndt7core = (function () {
     locate({
       callback: function (url) {
         config.onserverurl(url)
-        startTest(config, url, "download", function () {
-          startTest(config, url, "upload", config.oncomplete)
+        startTest(config, url, "roundtrip", function () {
+          startTest(config, url, "download", function () {
+            startTest(config, url, "upload", config.oncomplete)
+          })
         })
       },
       mockedResult: config.baseURL,

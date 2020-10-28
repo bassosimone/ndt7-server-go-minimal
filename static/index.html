@@ -112,9 +112,9 @@
       }
 
       function viewMaybeUpdateMinRTT(ev) {
-        if (ev.TCPInfo !== undefined && ev.Origin === "server") {
-          if (ev.TCPInfo.MinRTT !== undefined) {
-            const minrtt = ev.TCPInfo.MinRTT / 1e03 // ms
+        if (ev.AppInfo !== undefined && ev.Origin === "server") {
+          if (ev.AppInfo.SRTT !== undefined) {
+            const minrtt = ev.AppInfo.SRTT / 1e03 // ms
             const elem = document.getElementById("ping")
             elem.innerHTML = minrtt.toFixed(1) + " ms"
           }
