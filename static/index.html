@@ -122,7 +122,8 @@
       }
 
       function viewGetBaseURL() {
-        return window.location
+        const url = window.location
+        return url.origin + url.pathname
       }
 
       function viewSetServer(url) {
