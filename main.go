@@ -37,6 +37,8 @@ type roundTripRequest struct {
 
 type roundTripReply struct {
 	STE time.Duration // sender time echo (μs)
+	STD time.Duration // sender time difference (μs)
+	RT  time.Duration // receiver time (μs)
 }
 
 func roundTripRecvReply(conn *websocket.Conn) (*roundTripReply, error) {
@@ -64,10 +66,10 @@ type roundTripStats struct {
 	nsamples int64
 }
 
-func (rts roundTripStats) String(elapsed time.Duration) string {
+func (rts roundTripStats) String(elapsed time.Duration, prefix string) string {
 	return fmt.Sprintf(
-		`{"AppInfo":{"SRTT":%f,"RTTVar":%f,"ElapsedTime":%d},"Test":"%s"}`,
-		rts.SRTT, rts.RTTVar, elapsed, "roundtrip")
+		`{"AppInfo":{"Smoothed%s":%f,"%sVar":%f,"ElapsedTime":%d},"Test":"%s"}`,
+		prefix, rts.SRTT, prefix, rts.RTTVar, elapsed, "roundtrip")
 }
 
 func (rts *roundTripStats) update(sample float64) {
@@ -97,11 +99,15 @@ func roundTripTest(ctx context.Context, conn *websocket.Conn) error {
 	conn.SetReadLimit(roundTripMaxMessageSize)
 	ticker := time.NewTicker(roundTripInterval)
 	defer ticker.Stop()
-	var stats roundTripStats
+	var (
+		sendstats roundTripStats
+		recvstats roundTripStats
+		rttstats  roundTripStats
+	)
 	for ctx.Err() == nil {
 		request := roundTripRequest{
-			RTTVar: stats.RTTVar,
-			SRTT:   stats.SRTT,
+			RTTVar: rttstats.RTTVar,
+			SRTT:   rttstats.SRTT,
 			ST:     time.Since(start) / time.Microsecond,
 		}
 		if err := conn.WriteJSON(request); err != nil {
@@ -115,9 +121,16 @@ func roundTripTest(ctx context.Context, conn *websocket.Conn) error {
 		// the client is cheating by asserting that request.ST == reply.STE
 		// and we could otherwise stop the experiment
 		elapsed := time.Since(start) / time.Microsecond
-		sample := float64(elapsed - reply.STE)
-		stats.update(sample)
-		fmt.Printf("%s\n\n", stats.String(elapsed))
+		sendstats.update(float64(reply.STD))
+		fmt.Printf("%s\n\n", sendstats.String(elapsed, "SNDT"))
+		// TODO(bassosimone): like we do in the client here we could
+		// improve elapsed by computing it in roundTripRecvReply.
+		RTD := float64(elapsed - reply.RT)
+		recvstats.update(RTD)
+		fmt.Printf("%s\n\n", recvstats.String(elapsed, "RCVT"))
+		rttsample := float64(elapsed - reply.STE)
+		rttstats.update(rttsample)
+		fmt.Printf("%s\n\n", rttstats.String(elapsed, "RTT"))
 		// Implementation note: the main purpose of waiting here is to
 		// avoid flooding the client if RTT < 100 ms.
 		<-ticker.C
