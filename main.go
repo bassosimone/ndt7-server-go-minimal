@@ -2,12 +2,14 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -21,10 +23,110 @@ const (
 	maxRuntime           = 10 * time.Second
 	measureInterval      = 250 * time.Millisecond
 	fractionForScaling   = 16
+
+	roundTripInterval       = 100 * time.Millisecond
+	roundTripMaxMessageSize = 1 << 17
+	roundTripRuntime        = 3 * time.Second
 )
 
+type roundTripRequest struct {
+	RTTVar float64       // RTT variance (μs)
+	SRTT   float64       // smoothed RTT (μs)
+	ST     time.Duration // sender time (μs)
+}
+
+type roundTripReply struct {
+	STE time.Duration // sender time echo (μs)
+}
+
+func roundTripRecvReply(conn *websocket.Conn) (*roundTripReply, error) {
+	kind, reader, err := conn.NextReader()
+	if err != nil {
+		return nil, err
+	}
+	if kind != websocket.TextMessage {
+		return nil, errors.New("unexpected message type")
+	}
+	data, err := ioutil.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	var reply roundTripReply
+	if err := json.Unmarshal(data, &reply); err != nil {
+		return nil, err
+	}
+	return &reply, nil
+}
+
+type roundTripStats struct {
+	SRTT     float64
+	RTTVar   float64
+	nsamples int64
+}
+
+func (rts roundTripStats) String(elapsed time.Duration) string {
+	return fmt.Sprintf(
+		`{"AppInfo":{"SRTT":%f,"RTTVar":%f,"ElapsedTime":%d},"Test":"%s"}`,
+		rts.SRTT, rts.RTTVar, elapsed, "roundtrip")
+}
+
+func (rts *roundTripStats) update(sample float64) {
+	// See https://tools.ietf.org/html/rfc6298
+	const (
+		alpha = 0.125
+		beta  = 0.25
+	)
+	rts.nsamples++
+	if rts.nsamples == 1 {
+		rts.SRTT = sample
+		rts.RTTVar = sample / 2
+		return
+	}
+	rts.RTTVar = (1-beta)*rts.RTTVar + beta*math.Abs(rts.RTTVar-sample)
+	rts.SRTT = (1-alpha)*rts.SRTT + alpha*sample
+}
+
+func roundTripTest(ctx context.Context, conn *websocket.Conn) error {
+	start := time.Now()
+	if err := conn.SetReadDeadline(start.Add(roundTripRuntime)); err != nil {
+		return err
+	}
+	if err := conn.SetWriteDeadline(start.Add(roundTripRuntime)); err != nil {
+		return err
+	}
+	conn.SetReadLimit(roundTripMaxMessageSize)
+	ticker := time.NewTicker(roundTripInterval)
+	defer ticker.Stop()
+	var stats roundTripStats
+	for ctx.Err() == nil {
+		request := roundTripRequest{
+			RTTVar: stats.RTTVar,
+			SRTT:   stats.SRTT,
+			ST:     time.Since(start) / time.Microsecond,
+		}
+		if err := conn.WriteJSON(request); err != nil {
+			return err
+		}
+		reply, err := roundTripRecvReply(conn)
+		if err != nil {
+			return err
+		}
+		// TODO(bassosimone): here we could potentially check whether
+		// the client is cheating by asserting that request.ST == reply.STE
+		// and we could otherwise stop the experiment
+		elapsed := time.Since(start) / time.Microsecond
+		sample := float64(elapsed - reply.STE)
+		stats.update(sample)
+		fmt.Printf("%s\n\n", stats.String(elapsed))
+		// Implementation note: the main purpose of waiting here is to
+		// avoid flooding the client if RTT < 100 ms.
+		<-ticker.C
+	}
+	return nil
+}
+
 func emitAppInfo(start time.Time, total int64, testname string) {
-	fmt.Printf(`{"AppInfo":{"NumBytes":%d,"ElapsedTime":%d},"Test":"%s"}`+"\n",
+	fmt.Printf(`{"AppInfo":{"NumBytes":%d,"ElapsedTime":%d},"Test":"%s"}`+"\n\n",
 		total, time.Since(start)/time.Microsecond, testname)
 }
 
@@ -127,6 +229,11 @@ var (
 
 func main() {
 	flag.Parse()
+	http.HandleFunc("/ndt/v7/roundtrip", func(w http.ResponseWriter, r *http.Request) {
+		if conn, err := upgrade(w, r); err == nil {
+			roundTripTest(r.Context(), conn)
+		}
+	})
 	http.HandleFunc("/ndt/v7/download", func(w http.ResponseWriter, r *http.Request) {
 		if conn, err := upgrade(w, r); err == nil {
 			downloadTest(r.Context(), conn)
