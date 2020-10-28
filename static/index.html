@@ -122,20 +122,7 @@
       }
 
       function viewGetBaseURL() {
-        const url = window.location
-        // This code allows the user to specify a server using the fragment
-        const podspec = /^#mlab[1-9]{1}-[a-z]{3}[0-9]{2}$/
-        if (url.hash.match(podspec)) {
-          let pod = url.hash.substring(1)
-          return `https://ndt-iupui-${pod}.measurement-lab.org/`
-        }
-        // As a special case, when running from local host we assume we can run ndt7
-        // with it, as happens for bassosimone/ndt7-server-go-minimal
-        if (url.hostname === "127.0.0.1" || url.hostname === "[::1]") {
-          return url.origin + url.pathname
-        }
-        // Otherwise, we use locate.measurementlab.net
-        return ""
+        return window.location
       }
 
       function viewSetServer(url) {
