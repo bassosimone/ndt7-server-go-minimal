@@ -162,7 +162,9 @@ func uploadTest(ctx context.Context, conn *websocket.Conn) error {
 			if err != nil {
 				return err
 			}
+			total += int64(len(data))
 			fmt.Printf("%s\n", string(data))
+			continue
 		}
 		n, err := io.Copy(ioutil.Discard, reader)
 		if err != nil {
